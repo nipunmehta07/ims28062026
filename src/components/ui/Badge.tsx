@@ -12,6 +12,7 @@ const badgeVariants = cva(
         warning: 'bg-warning/10 text-warning',
         error: 'bg-error/10 text-error',
         danger: 'bg-error/10 text-error',
+        info: 'bg-info/10 text-info',
         gradient: 'bg-gradient-to-r from-accent to-accent-hover text-white border-none',
         neutral: 'bg-bg-tertiary text-text-secondary',
       },

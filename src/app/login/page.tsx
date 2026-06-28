@@ -10,8 +10,7 @@ import { Button } from "@/components/ui/Button";
 // Change this line
 // import { FormField } from "@/components/composite/FormField";
 
-// To this
-import { FormField } from "@/components/ui/form";
+import { FormField } from "@/components/composite/FormField";
 import { Input } from "@/components/ui/Input";
 import { useToast } from "@/components/ui/Toast";
 
