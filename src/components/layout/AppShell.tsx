@@ -1,4 +1,4 @@
-// components/layout/AppShell.tsx
+// src/components/layout/AppShell.tsx
 'use client';
 
 import { useState } from 'react';
@@ -11,7 +11,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
 
   return (
-    <div className="flex h-screen bg-[#0a0a0f] text-white">
+    <div className="flex h-screen bg-background">
       <Sidebar 
         collapsed={sidebarCollapsed} 
         onToggle={() => setSidebarCollapsed(!sidebarCollapsed)} 
