@@ -110,10 +110,7 @@ export {
 // Command Palette
 export {
   CommandPalette,
-  CommandPaletteTrigger,
   type CommandPaletteProps,
-  type CommandPaletteTriggerProps,
-  type CommandAction
 } from "./CommandPalette";
 
 // Drawer

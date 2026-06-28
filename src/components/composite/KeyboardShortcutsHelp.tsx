@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Modal, ModalContent, ModalHeader, ModalTitle, type ModalProps } from "@/app/components/ui/Modal";
+import { Modal, ModalContent, ModalHeader, ModalTitle, type ModalProps } from "@/components/ui/Modal";
 import { getModifierSymbol, getShortcutDisplay, normalizeShortcut } from "@/lib/platform";
 
 export interface KeyboardShortcut {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { addItemAction, updateItemAction } from "../../actions";
+import { addItemAction, updateItemAction } from "@/app/actions";
 import toast from "react-hot-toast";
 
 export default function AddItemForm({ onCancel, onSuccess, initialData }: { onCancel: () => void, onSuccess: () => void, initialData?: any }) {

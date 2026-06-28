@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { getInventory, createSalesOrderAction, updateSalesOrderAction } from "../../actions"; 
+import { getInventory, createSalesOrderAction, updateSalesOrderAction } from "@/app/actions"; 
 import toast from "react-hot-toast";
 import { X } from "lucide-react"; //
 

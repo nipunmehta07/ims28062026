@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { getTopSellingStats } from "../actions";
+import { getTopSellingStats } from "@/app/actions";
 
 export default function TopProducts() {
   const [data, setData] = useState<any>({ topSellingSKUs: [], highPriorityAlerts: [] });

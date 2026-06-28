@@ -4,7 +4,7 @@ import { forwardRef, useState } from "react";
 import { RotateCcw, Box, Hammer } from "lucide-react";
 import { Modal } from "./Modal";
 import { Button } from "./Button";
-import { processReturnAction } from "../../actions";
+import { processReturnAction } from "@/app/actions";
 import { useToast } from "./Toast";
 
 export interface ReturnModalProps {

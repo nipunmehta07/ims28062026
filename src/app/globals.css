@@ -1,69 +1,76 @@
 /* src/app/globals.css */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import "tailwindcss";
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
-@layer base {
-  :root {
-    --background: 240 10% 4%;
-    --foreground: 0 0% 98%;
-    --card: 240 6% 10%;
-    --card-foreground: 0 0% 98%;
-    --popover: 240 6% 10%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 239 84% 67%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 240 4% 16%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 240 4% 16%;
-    --muted-foreground: 240 5% 65%;
-    --accent: 239 84% 67%;
-    --accent-foreground: 0 0% 100%;
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 240 4% 16%;
-    --input: 240 4% 16%;
-    --ring: 239 84% 67%;
-    --radius: 0.5rem;
-  }
+@theme {
+  /* Light theme (default) */
+  --color-bg-primary: #f5f7fb;
+  --color-bg-secondary: #ffffff;
+  --color-bg-tertiary: #f0f2f6;
+  --color-bg-hover: #e8ebf0;
+  --color-border: #e2e6ee;
+  --color-border-light: #d0d5e0;
+  --color-text-primary: #0a0a0f;
+  --color-text-secondary: #5a6278;
+  --color-text-tertiary: #8a93a8;
+  --color-accent: #6366f1;
+  --color-accent-hover: #818cf8;
+  --color-accent-subtle: rgba(99, 102, 241, 0.1);
+  --color-success: #34d399;
+  --color-warning: #fbbf24;
+  --color-error: #f87171;
+  --color-info: #60a5fa;
+  
+  /* Top bar - Navy blue in light mode for premium contrast */
+  --color-topbar-bg: #060b21;
+  --color-topbar-text: #ffffff;
+  --color-topbar-text-secondary: #94a3b8;
+  --color-topbar-border: #0f1a3a;
+  --color-topbar-hover: rgba(255, 255, 255, 0.08);
 }
 
-@layer base {
-  * {
-    @apply border-border;
-  }
-  body {
-    @apply bg-background text-text-primary;
-    font-feature-settings: "rlig" 1, "calt" 1;
-  }
+/* Dark theme overrides – applied when .dark is on <html> */
+.dark {
+  --color-bg-primary: #0a0a0f;
+  --color-bg-secondary: #14141e;
+  --color-bg-tertiary: #1e1e2e;
+  --color-bg-hover: #2a2a3e;
+  --color-border: #2a2a3e;
+  --color-border-light: #3a3a52;
+  --color-text-primary: #ffffff;
+  --color-text-secondary: #a0a0b8;
+  --color-text-tertiary: #6e6e8a;
+  --color-accent: #6366f1;
+  --color-accent-hover: #818cf8;
+  --color-accent-subtle: rgba(99, 102, 241, 0.1);
+  --color-success: #34d399;
+  --color-warning: #fbbf24;
+  --color-error: #f87171;
+  --color-info: #60a5fa;
+  
+  /* Top bar - Dark navy in dark mode (slightly lighter than bg) */
+  --color-topbar-bg: #0a0a1a;
+  --color-topbar-text: #ffffff;
+  --color-topbar-text-secondary: #94a3b8;
+  --color-topbar-border: #1a1a3a;
+  --color-topbar-hover: rgba(255, 255, 255, 0.06);
 }
 
-/* Custom Scrollbar */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+body {
+  background-color: var(--color-bg-primary);
+  color: var(--color-text-primary);
+  font-family: 'Inter', sans-serif;
 }
 
-::-webkit-scrollbar-track {
-  @apply bg-background-secondary;
+/* Smooth theme transitions */
+* {
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
 }
 
-::-webkit-scrollbar-thumb {
-  @apply bg-border rounded-full;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  @apply bg-border-light;
-}
-
-/* Focus Styles */
-*:focus-visible {
-  @apply outline-none ring-2 ring-accent ring-offset-2 ring-offset-background;
-}
-
-/* Selection */
-::selection {
-  @apply bg-accent/30 text-text-primary;
-}
+/* Scrollbar, focus, selection */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background-color: var(--color-bg-secondary); }
+::-webkit-scrollbar-thumb { background-color: var(--color-border); border-radius: 9999px; }
+::-webkit-scrollbar-thumb:hover { background-color: var(--color-border-light); }
+*:focus-visible { outline: none; ring: 2px solid var(--color-accent); ring-offset: 2px; ring-offset-color: var(--color-bg-primary); }
+::selection { background-color: var(--color-accent-subtle); color: var(--color-text-primary); }

@@ -2,8 +2,8 @@
 
 import { useState, useCallback } from "react";
 import { useRealtimeStockUpdates, type StockUpdate } from "@/hooks/useRealtimeStockUpdates";
-import { Badge } from "@/app/components/ui/Badge";
-import { Button } from "@/app/components/ui/Button";
+import { Badge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
 import {
   Bell,
   Package,

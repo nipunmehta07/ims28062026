@@ -23,7 +23,12 @@ const commands = [
   },
 ];
 
-export function CommandPalette({ open, onClose }: { open: boolean; onClose: () => void }) {
+export interface CommandPaletteProps {
+  open: boolean;
+  onClose: () => void;
+}
+
+export function CommandPalette({ open, onClose }: CommandPaletteProps) {
   const [query, setQuery] = useState('');
 
   useEffect(() => {

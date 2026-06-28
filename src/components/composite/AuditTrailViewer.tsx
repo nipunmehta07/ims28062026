@@ -2,9 +2,9 @@
 
 import { useState, useMemo } from "react";
 import { DataTable, type DataTableColumn, type DataTablePagination } from "./DataTable";
-import { Card } from "@/app/components/ui/Card";
-import { Badge } from "@/app/components/ui/Badge";
-import { Button } from "@/app/components/ui/Button";
+import { Card } from "@/components/ui/Card";
+import { Badge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
 import { PageHeader } from "./PageHeader";
 import {
   Download,

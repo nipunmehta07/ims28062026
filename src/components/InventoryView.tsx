@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo, useRef } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { getInventory, getItemHistory, deleteItemAction, bulkAddItemsAction } from "../actions";
+import { getInventory, getItemHistory, deleteItemAction, bulkAddItemsAction } from "@/app/actions";
 import AddItemForm from "./forms/AddItemForm";
 import Drawer from "./ui/Drawer";
 import toast from "react-hot-toast";

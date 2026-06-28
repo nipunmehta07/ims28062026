@@ -1,7 +1,7 @@
 "use client";
 
 import { forwardRef, ReactNode, useState } from "react";
-import { Drawer, Tabs, Button } from "@/app/components/ui";
+import { Drawer, Tabs, Button } from "@/components/ui";
 import { Save, Trash2 } from "lucide-react";
 
 export interface DetailDrawerTab {

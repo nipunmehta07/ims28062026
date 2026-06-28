@@ -1,7 +1,7 @@
 "use client";
 
 import { forwardRef, ReactNode, useEffect, useCallback, useRef } from "react";
-import { Modal, Button } from "@/app/components/ui";
+import { Modal, Button } from "@/components/ui";
 import { AlertTriangle, Info, XCircle, Loader2, ShieldCheck, Sparkles } from "lucide-react";
 
 export type ConfirmDialogVariant = "default" | "warning" | "danger" | "success" | "info";

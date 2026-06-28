@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
-import { getRevenueData } from "../actions";
+import { getRevenueData } from "@/app/actions";
 
 export default function RevenueChart() {
   const [data, setData] = useState<any[]>([]);

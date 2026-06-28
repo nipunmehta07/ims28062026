@@ -2,7 +2,7 @@
 
 import React, { useState, useRef } from "react";
 import toast from "react-hot-toast";
-import { generateBackupData, factoryResetInstance, restoreBackupData } from "../actions"; 
+import { generateBackupData, factoryResetInstance, restoreBackupData } from "@/app/actions"; 
 
 export default function SettingsView() {
   const fileInputRef = useRef<HTMLInputElement>(null);

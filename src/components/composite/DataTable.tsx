@@ -12,7 +12,7 @@ import {
   Button,
   Input,
   type DropdownOption,
-} from "@/app/components/ui";
+} from "@/components/ui";
 import {
   Search,
   Download,

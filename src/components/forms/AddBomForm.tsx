@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { getInventory, createBomAction } from "../../actions";
+import { getInventory, createBomAction } from "@/app/actions";
 import toast from "react-hot-toast";
 
 export default function AddBomForm({ onCancel, onSuccess }: { onCancel: () => void, onSuccess: () => void }) {

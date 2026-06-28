@@ -9,7 +9,7 @@ import {
   deleteOrderAction, 
   getInventory,
   getOrderReturnLogs 
-} from "../actions";
+} from "@/app/actions";
 import SalesOrderForm from "./forms/SalesOrderForm";
 import Drawer from "./ui/Drawer";
 import ReturnModal from "./ui/ReturnModal"; 

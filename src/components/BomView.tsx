@@ -13,7 +13,7 @@ import {
   getProductionLogs,
   deleteProductionLogAction,
   bulkAddBomsAction
-} from "../actions";
+} from "@/app/actions";
 import Papa from "papaparse";
 import SearchableSelect from "./ui/SearchableSelect";
 import Drawer from "./ui/Drawer";

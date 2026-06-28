@@ -1,7 +1,7 @@
 "use client";
 
 import { forwardRef, ReactNode, useMemo } from "react";
-import { Card, Badge, Button } from "@/app/components/ui";
+import { Card, Badge, Button } from "@/components/ui";
 import { TrendingUp, TrendingDown, Minus, ArrowRight } from "lucide-react";
 
 export interface StatCardTrend {

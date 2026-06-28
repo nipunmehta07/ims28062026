@@ -1,7 +1,7 @@
 "use client";
 
 import { forwardRef, ReactNode, useState } from "react";
-import { Button, Dropdown, Input } from "@/app/components/ui";
+import { Button, Dropdown, Input } from "@/components/ui";
 import { Search, Plus, MoreHorizontal } from "lucide-react";
 
 export interface ActionBarPrimaryAction {

@@ -3,7 +3,7 @@
 import React, { useState, useMemo } from "react";
 // 1. Import TanStack Query hooks
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { getInwardHistory, deleteInwardAction } from "../actions";
+import { getInwardHistory, deleteInwardAction } from "@/app/actions";
 import StockInwardForm from "./forms/StockInwardForm";
 import Drawer from "./ui/Drawer";
 import toast from "react-hot-toast";

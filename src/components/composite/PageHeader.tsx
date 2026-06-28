@@ -1,7 +1,7 @@
 "use client";
 
 import { forwardRef, ReactNode } from "react";
-import { Breadcrumb, BreadcrumbItem, Button } from "@/app/components/ui";
+import { Breadcrumb, BreadcrumbItem, Button } from "@/components/ui";
 
 export interface PageHeaderBreadcrumbItem {
   label: string;

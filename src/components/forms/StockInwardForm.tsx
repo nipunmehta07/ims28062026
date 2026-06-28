@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { getInventory, stockInwardAction, updateInwardAction } from "../../actions";
+import { getInventory, stockInwardAction, updateInwardAction } from "@/app/actions";
 import SearchableSelect from "../ui/SearchableSelect";
 import toast from "react-hot-toast";
 import { Input } from "../ui/Input";

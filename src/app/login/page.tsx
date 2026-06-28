@@ -5,11 +5,15 @@ import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Mail, Lock, Eye, EyeOff, Globe, GitFork } from "lucide-react";
-import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/app/components/ui/Card";
-import { Button } from "@/app/components/ui/Button";
-import { FormField } from "@/app/components/composite/FormField";
-import { Input } from "@/app/components/ui/Input";
-import { useToast } from "@/app/components/ui/Toast";
+import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
+// Change this line
+// import { FormField } from "@/components/composite/FormField";
+
+// To this
+import { FormField } from "@/components/ui/form";
+import { Input } from "@/components/ui/Input";
+import { useToast } from "@/components/ui/Toast";
 
 export default function LoginPage() {
   const [username, setUsername] = useState("");
@@ -92,7 +96,7 @@ export default function LoginPage() {
                   type="text"
                   placeholder="Enter your username"
                   value={username}
-                  onChange={(e) => setUsername(e.target.value)}
+                  onChange={(e: any) => setUsername(e.target.value)}
                   className="pl-12 border-emerald-500/20 focus:border-emerald-500 focus:ring-emerald-500/10"
                 />
               </div>
@@ -105,7 +109,7 @@ export default function LoginPage() {
                   type={showPassword ? "text" : "password"}
                   placeholder="Enter your password"
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(e: any) => setPassword(e.target.value)}
                   className="pl-12 pr-12 border-emerald-500/20 focus:border-emerald-500 focus:ring-emerald-500/10"
                 />
                 <button

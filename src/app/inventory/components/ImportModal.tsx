@@ -16,8 +16,8 @@ import {
   TableHead,
   TableCell,
   Progress,
-} from "@/app/components/ui";
-import { FileUpload } from "@/app/components/ui/FileUpload";
+} from "@/components/ui";
+import { FileUpload } from "@/components/ui/FileUpload";
 import { bulkAddItemsAction } from "@/app/actions";
 import toast from "react-hot-toast";
 import { Upload, X, AlertCircle, CheckCircle, FileSpreadsheet } from "lucide-react";
@@ -213,7 +213,7 @@ export function ImportModal({
               multiple={false}
               maxFiles={1}
               maxSize={10}
-              onChange={(files) => handleFileSelect(files)}
+              onChange={handleFileSelect}
               showPreview={false}
             />
           </div>

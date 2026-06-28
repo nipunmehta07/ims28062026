@@ -12,9 +12,9 @@ import {
   Input,
   Textarea,
   Dropdown,
-} from "@/app/components/ui";
-import { FormField } from "@/app/components/composite/FormField";
-import { FileUpload } from "@/app/components/ui/FileUpload";
+} from "@/components/ui";
+import { FormField } from "@/components/composite/FormField";
+import { FileUpload } from "@/components/ui/FileUpload";
 import { addItemAction, updateItemAction, deleteItemAction } from "@/app/actions";
 import toast from "react-hot-toast";
 import { Plus, Trash2 } from "lucide-react";
@@ -281,7 +281,7 @@ export function ProductModal({
             >
               <Input
                 value={formData.name}
-                onChange={(e) => handleFieldChange("name", e.target.value)}
+                onChange={(e: any) => handleFieldChange("name", e.target.value)}
                 placeholder="e.g. Chrome Basin Mixer"
                 error={errors.name}
                 floating
@@ -295,7 +295,7 @@ export function ProductModal({
             >
               <Input
                 value={formData.sku}
-                onChange={(e) => handleFieldChange("sku", e.target.value)}
+                onChange={(e: any) => handleFieldChange("sku", e.target.value)}
                 placeholder="ZOIE-BM-001"
                 error={errors.sku}
                 floating
@@ -308,7 +308,7 @@ export function ProductModal({
               <Dropdown
                 options={CATEGORIES}
                 value={formData.category}
-                onChange={(val) => handleFieldChange("category", val)}
+                onChange={(val: any) => handleFieldChange("category", val)}
                 placeholder="Select category"
                 error={errors.category}
               />
@@ -318,7 +318,7 @@ export function ProductModal({
               <Dropdown
                 options={UNITS}
                 value={formData.unit}
-                onChange={(val) => handleFieldChange("unit", val)}
+                onChange={(val: any) => handleFieldChange("unit", val)}
               />
             </FormField>
 
@@ -328,7 +328,7 @@ export function ProductModal({
                 step="0.01"
                 min="0"
                 value={formData.price}
-                onChange={(e) => handleFieldChange("price", parseFloat(e.target.value) || 0)}
+                onChange={(e: any) => handleFieldChange("price", parseFloat(e.target.value) || 0)}
                 error={errors.price}
                 floating
               />
@@ -338,7 +338,7 @@ export function ProductModal({
           <FormField label="Description">
             <Textarea
               value={formData.description}
-              onChange={(e) => handleFieldChange("description", e.target.value)}
+              onChange={(e: any) => handleFieldChange("description", e.target.value)}
               placeholder="Enter product description..."
               rows={3}
             />
@@ -352,7 +352,7 @@ export function ProductModal({
                   type="number"
                   min="0"
                   value={formData.stock}
-                  onChange={(e) => handleFieldChange("stock", parseInt(e.target.value) || 0)}
+                  onChange={(e: any) => handleFieldChange("stock", parseInt(e.target.value) || 0)}
                   error={errors.stock}
                   floating
                 />
@@ -367,7 +367,7 @@ export function ProductModal({
               multiple
               maxFiles={5}
               maxSize={5}
-              onChange={(files) => handleFieldChange("images", files)}
+              onChange={(files: any) => handleFieldChange("images", files)}
               showPreview
             />
           </FormField>
@@ -404,7 +404,7 @@ export function ProductModal({
                     <FormField label="Name" className="col-span-2">
                       <Input
                         value={variant.name}
-                        onChange={(e) =>
+                        onChange={(e: any) =>
                           handleUpdateVariant(variant.id, "name", e.target.value)
                         }
                         placeholder="e.g. Large"
@@ -414,7 +414,7 @@ export function ProductModal({
                     <FormField label="SKU">
                       <Input
                         value={variant.sku}
-                        onChange={(e) =>
+                        onChange={(e: any) =>
                           handleUpdateVariant(variant.id, "sku", e.target.value)
                         }
                         placeholder="VAR-001"
@@ -426,7 +426,7 @@ export function ProductModal({
                         type="number"
                         step="0.01"
                         value={variant.price}
-                        onChange={(e) =>
+                        onChange={(e: any) =>
                           handleUpdateVariant(
                             variant.id,
                             "price",
@@ -442,7 +442,7 @@ export function ProductModal({
                           type="number"
                           min="0"
                           value={variant.stock}
-                          onChange={(e) =>
+                          onChange={(e: any) =>
                             handleUpdateVariant(
                               variant.id,
                               "stock",

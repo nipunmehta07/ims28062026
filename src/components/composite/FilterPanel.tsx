@@ -2,7 +2,7 @@
 
 import { forwardRef, useState, useEffect, useCallback } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
-import { Card, Button, Badge } from "@/app/components/ui";
+import { Card, Button, Badge } from "@/components/ui";
 import { FormField } from "./FormField";
 import { ChevronDown, ChevronUp, X, RotateCcw, Link2 } from "lucide-react";
 

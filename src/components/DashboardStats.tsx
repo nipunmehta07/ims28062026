@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { getDashboardStats } from "../actions";
+import { getDashboardStats } from "@/app/actions";
 import { Card } from "./ui/Card";
 import { Badge } from "./ui/Badge";
 
