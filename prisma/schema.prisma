@@ -1,0 +1,156 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("POSTGRES_PRISMA_URL")
+  directUrl = env("POSTGRES_URL_NON_POOLING")
+}
+
+// 1. The Master Inventory List
+model Item {
+  id              String   @id @default(uuid())
+  sku             String   @unique
+  name            String
+  category        String   
+  quantityOnHand  Float    @default(0)
+  unit            String   @default("pcs")
+  unitCost        Float    @default(0.0)
+  
+  // Relationships
+  boms    Bom[]    @relation("MasterItem")
+  bomsAsComponent BomComponent[]
+  transactions    InventoryTransaction[] // <-- ADD THIS LINE
+
+  @@map("item")
+  salesOrders    SalesOrderItem[]
+}
+
+// 2. The Bill of Materials (The Recipe)
+model Bom {
+  id              String   @id @default(uuid())
+  name            String
+  revision        String   @default("v1.0")
+  
+  itemId          String
+  item            Item     @relation("MasterItem", fields: [itemId], references: [id])
+  
+  components      BomComponent[]
+  productionLogs  ProductionLog[]
+
+  @@map("bom")
+}
+
+// 3. The BOM Ingredients
+model BomComponent {
+  id              String   @id @default(uuid())
+  quantity        Float    
+  
+  bomId           String
+  bom             Bom      @relation(fields: [bomId], references: [id])
+  
+  componentItemId String
+  componentItem   Item     @relation(fields: [componentItemId], references: [id])
+
+  @@map("bom_component")
+}
+
+// 4. THE NEW STOCK LEDGER (History)
+model InventoryTransaction {
+  id          String   @id @default(uuid())
+  
+  // Link to the specific item
+  itemId      String
+  item        Item     @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  
+  // The Movement Details
+  changeQty   Float    // Use positive numbers for IN (e.g., +50), negative for OUT (e.g., -5)
+  newTotalQty Float    // A snapshot of what the total became after this transaction
+  reason      String   // e.g., "Initial Stock", "BOM Production", "Manual Adjustment"
+  
+  // Timestamp automatically records exactly when this happened
+  createdAt   DateTime @default(now())
+
+  @@map("inventory_transaction")
+}
+model SalesOrder {
+  id              String           @id @default(cuid())
+  customerName    String
+  orderDate       DateTime
+  status          String           @default("PENDING") 
+  totalAmount     Float            @default(0)
+  discountPercent Float            @default(0) // <--- ADD THIS LINE
+  items           SalesOrderItem[]
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+}
+
+model SalesOrderItem {
+  id        String     @id @default(cuid())
+  orderId   String
+  order     SalesOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  itemId    String
+  item      Item       @relation(fields: [itemId], references: [id])
+  quantity  Int
+  salePrice Float      @default(0)
+}
+model Account {
+  id                 String  @id @default(cuid())
+  userId             String
+  type               String
+  provider           String
+  providerAccountId  String
+  refresh_token      String?  @db.Text
+  access_token       String?  @db.Text
+  expires_at         Int?
+  token_type         String?
+  scope              String?
+  id_token           String?  @db.Text
+  session_state      String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  username      String?   @unique
+  email         String?   @unique
+  password      String?
+  
+  // NEW ROLE FIELD 
+  role          String    @default("STAFF") // Use "ADMIN" or "STAFF"
+  
+  accounts      Account[]
+  sessions      Session[]
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+model ProductionLog {
+  id              String   @id @default(cuid())
+  bomId           String
+  bomName         String
+  finishedItemId  String
+  quantityBuilt   Int
+  notes           String?
+  createdAt       DateTime @default(now()) // This will store your custom build date 
+  
+  bom             Bom      @relation(fields: [bomId], references: [id])
+}
