@@ -24,6 +24,7 @@ import {
   Calendar
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import InwardLedger from '@/components/InwardLedger';
 
 // Types
 interface Transaction {
@@ -107,6 +108,7 @@ const units = ['Pcs', 'Box', 'Kg', 'Ltr', 'Mtr', 'Set'];
 
 export default function InventoryPage() {
   // State
+  const [activeTab, setActiveTab] = useState<'master' | 'inward'>('master');
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
@@ -435,67 +437,116 @@ export default function InventoryPage() {
           <h1 className="text-xl font-semibold text-text-primary">Inventory</h1>
           <p className="text-sm text-text-secondary">Manage your products and stock levels</p>
         </div>
-        <div className="flex items-center gap-3 flex-wrap">
-          <button 
-            onClick={() => {}} 
-            className="flex items-center gap-2 px-3 py-2 text-sm text-text-secondary bg-bg-tertiary hover:bg-bg-hover rounded-xl transition-colors border border-border"
-          >
-            <Download className="w-4 h-4" />
-            Export
-          </button>
-          <button 
-            onClick={() => {}} 
-            className="flex items-center gap-2 px-3 py-2 text-sm text-text-secondary bg-bg-tertiary hover:bg-bg-hover rounded-xl transition-colors border border-border"
-          >
-            <Upload className="w-4 h-4" />
-            Import
-          </button>
-          <button 
-            onClick={() => openModal()}
-            className="flex items-center gap-2 px-4 py-2 text-sm text-white bg-accent hover:bg-accent-hover rounded-xl transition-colors"
-          >
-            <Plus className="w-4 h-4" />
-            Add Product
-          </button>
-        </div>
+        {activeTab === 'master' && (
+          <div className="flex items-center gap-3 flex-wrap">
+            <button 
+              onClick={() => {}} 
+              className="flex items-center gap-2 px-3 py-2 text-sm text-text-secondary bg-bg-tertiary hover:bg-bg-hover rounded-xl transition-colors border border-border"
+            >
+              <Download className="w-4 h-4" />
+              Export
+            </button>
+            <button 
+              onClick={() => {}} 
+              className="flex items-center gap-2 px-3 py-2 text-sm text-text-secondary bg-bg-tertiary hover:bg-bg-hover rounded-xl transition-colors border border-border"
+            >
+              <Upload className="w-4 h-4" />
+              Import
+            </button>
+            <button 
+              onClick={() => openModal()}
+              className="flex items-center gap-2 px-4 py-2 text-sm text-white bg-accent hover:bg-accent-hover rounded-xl transition-colors"
+            >
+              <Plus className="w-4 h-4" />
+              Add Product
+            </button>
+          </div>
+        )}
       </div>
+
+      {/* Sub-tabs Selector */}
+      <div className="flex border-b border-border">
+        <button
+          onClick={() => setActiveTab('master')}
+          className={cn(
+            "relative px-5 py-2.5 text-sm font-semibold transition-all",
+            activeTab === 'master'
+              ? "text-accent font-bold"
+              : "text-text-secondary hover:text-text-primary"
+          )}
+        >
+          Master Inventory
+          <span className={cn(
+            "ml-2 text-[10px] px-1.5 py-0.5 rounded-full font-bold",
+            activeTab === 'master' ? "bg-accent/15 text-accent" : "bg-bg-tertiary text-text-tertiary"
+          )}>
+            {pagination.total}
+          </span>
+          {activeTab === 'master' && (
+            <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-accent rounded-full" style={{ animation: 'slide-up-fade 0.2s ease-out' }} />
+          )}
+        </button>
+        <button
+          onClick={() => setActiveTab('inward')}
+          className={cn(
+            "relative px-5 py-2.5 text-sm font-semibold transition-all",
+            activeTab === 'inward'
+              ? "text-accent font-bold"
+              : "text-text-secondary hover:text-text-primary"
+          )}
+        >
+          Stock Inward Ledger
+          {activeTab === 'inward' && (
+            <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-accent rounded-full" style={{ animation: 'slide-up-fade 0.2s ease-out' }} />
+          )}
+        </button>
+      </div>
+
+      {activeTab === 'inward' ? (
+        <InwardLedger />
+      ) : (
+        <>
 
       {/* Quick Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-bg-secondary border border-border rounded-2xl p-4">
-          <div className="flex justify-between items-start">
+        <div className="glass-card glow-card rounded-2xl p-4 relative overflow-hidden stagger-enter">
+          <div className="absolute inset-0 bg-gradient-to-br from-accent/5 via-transparent to-transparent opacity-50" />
+          <div className="flex justify-between items-start relative z-10">
             <div>
-              <p className="text-sm text-text-secondary">Total Items</p>
-              <p className="text-2xl font-semibold text-text-primary mt-1">{pagination.total}</p>
+              <p className="text-xs font-bold text-text-secondary uppercase tracking-wider">Total Items</p>
+              <p className="text-2xl font-black text-text-primary mt-1 stat-number">{pagination.total}</p>
             </div>
-            <Package className="w-5 h-5 text-text-tertiary" />
+            <Package className="w-5 h-5 text-accent" />
           </div>
         </div>
-        <div className="bg-bg-secondary border border-border rounded-2xl p-4">
-          <div className="flex justify-between items-start">
+        <div className="glass-card glow-card rounded-2xl p-4 relative overflow-hidden stagger-enter">
+          <div className="absolute inset-0 bg-gradient-to-br from-success/5 via-transparent to-transparent opacity-50" />
+          <div className="flex justify-between items-start relative z-10">
             <div>
-              <p className="text-sm text-text-secondary">Total Value</p>
-              <p className="text-2xl font-semibold text-text-primary mt-1">{formatCurrency(totalValue)}</p>
+              <p className="text-xs font-bold text-text-secondary uppercase tracking-wider">Total Value</p>
+              <p className="text-2xl font-black text-text-primary mt-1 stat-number">{formatCurrency(totalValue)}</p>
             </div>
             <div className="w-5 h-5 rounded-full bg-success/10 flex items-center justify-center">
               <span className="text-success text-xs">₹</span>
             </div>
           </div>
         </div>
-        <div className="bg-bg-secondary border border-border rounded-2xl p-4">
-          <div className="flex justify-between items-start">
+        <div className="glass-card glow-card rounded-2xl p-4 relative overflow-hidden stagger-enter">
+          <div className="absolute inset-0 bg-gradient-to-br from-warning/5 via-transparent to-transparent opacity-50" />
+          <div className="flex justify-between items-start relative z-10">
             <div>
-              <p className="text-sm text-text-secondary">Low Stock</p>
-              <p className="text-2xl font-semibold text-warning mt-1">{lowStockCount}</p>
+              <p className="text-xs font-bold text-text-secondary uppercase tracking-wider">Low Stock</p>
+              <p className="text-2xl font-black text-warning mt-1 stat-number">{lowStockCount}</p>
             </div>
             <AlertTriangle className="w-5 h-5 text-warning" />
           </div>
         </div>
-        <div className="bg-bg-secondary border border-border rounded-2xl p-4">
-          <div className="flex justify-between items-start">
+        <div className="glass-card glow-card rounded-2xl p-4 relative overflow-hidden stagger-enter">
+          <div className="absolute inset-0 bg-gradient-to-br from-error/5 via-transparent to-transparent opacity-50" />
+          <div className="flex justify-between items-start relative z-10">
             <div>
-              <p className="text-sm text-text-secondary">Out of Stock</p>
-              <p className="text-2xl font-semibold text-error mt-1">{outOfStockCount}</p>
+              <p className="text-xs font-bold text-text-secondary uppercase tracking-wider">Out of Stock</p>
+              <p className="text-2xl font-black text-error mt-1 stat-number">{outOfStockCount}</p>
             </div>
             <XCircle className="w-5 h-5 text-error" />
           </div>
@@ -1129,6 +1180,8 @@ export default function InventoryPage() {
             </form>
           </div>
         </div>
+      )}
+        </>
       )}
     </div>
   );

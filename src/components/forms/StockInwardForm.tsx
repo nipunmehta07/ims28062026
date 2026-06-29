@@ -80,7 +80,7 @@ export default function StockInwardForm({
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-5 font-sans">
       <div>
-        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1.5">
+        <label className="text-[10px] font-bold text-text-tertiary uppercase tracking-widest block mb-1.5">
           Select Item
         </label>
         <SearchableSelect 
@@ -123,7 +123,7 @@ export default function StockInwardForm({
         placeholder="Optional remarks..." 
       />
 
-      <div className="flex gap-3 pt-6 border-t border-gray-100">
+      <div className="flex gap-3 pt-6 border-t border-border">
         <Button 
           type="submit" 
           variant="primary"

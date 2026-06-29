@@ -58,7 +58,17 @@ export async function stockInwardAction(data: {
   return result;
 }
 export async function addItemAction(data: { 
-  name: string, sku: string, category: string, unit: string, unitCost: number, initialQty: number, openingStockDate: string
+  name: string, 
+  sku: string, 
+  category: string, 
+  subCategory?: string,
+  unit: string, 
+  unitCost: number, 
+  initialQty: number, 
+  openingStockDate: string,
+  minStock?: number,
+  location?: string,
+  description?: string
 }) {
   try {
     const newItem = await prisma.$transaction(async (tx) => {
@@ -67,9 +77,15 @@ export async function addItemAction(data: {
           name: data.name,
           sku: data.sku,
           category: data.category,
+          subCategory: data.subCategory || '',
           unit: data.unit,
           unitCost: data.unitCost,
           quantityOnHand: data.initialQty,
+          minStock: data.minStock || 0,
+          location: data.location || '',
+          description: data.description || '',
+          openingStock: data.initialQty,
+          openingStockDate: data.openingStockDate,
         },
       });
 
@@ -94,7 +110,15 @@ export async function addItemAction(data: {
   }
 }
 export async function updateItemAction(itemId: string, data: { 
-  name: string, sku: string, category: string, unit: string, unitCost: number 
+  name: string, 
+  sku: string, 
+  category: string, 
+  subCategory?: string,
+  unit: string, 
+  unitCost: number,
+  minStock?: number,
+  location?: string,
+  description?: string
 }) {
   const updatedItem = await prisma.item.update({
     where: { id: itemId },
@@ -102,8 +126,12 @@ export async function updateItemAction(itemId: string, data: {
       name: data.name,
       sku: data.sku,
       category: data.category,
+      subCategory: data.subCategory || '',
       unit: data.unit,
       unitCost: data.unitCost,
+      minStock: data.minStock || 0,
+      location: data.location || '',
+      description: data.description || '',
       // Note: We intentionally do not update quantityOnHand here. 
       // Inventory levels should only change via production or sales transactions!
     }

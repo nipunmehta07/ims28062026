@@ -1,7 +1,6 @@
 "use client";
 
 import { forwardRef, useState, useRef, useEffect, HTMLAttributes } from "react";
-import { createPortal } from "react-dom";
 import { Search, ChevronDown, Check } from "lucide-react";
 
 // Legacy option interface (used with inventory prop)
@@ -149,7 +148,7 @@ export const SearchableSelect = forwardRef<HTMLDivElement, SearchableSelectProps
       ? `${selectedOption.label}${selectedOption.meta ? ` (${selectedOption.meta})` : ""}`
       : "";
 
-    const dropdownContent = (
+    return (
       <div ref={containerRef} className={`relative w-full ${className}`} {...props}>
         {/* Input */}
         <button
@@ -171,7 +170,7 @@ export const SearchableSelect = forwardRef<HTMLDivElement, SearchableSelectProps
           aria-expanded={isOpen}
           aria-haspopup="listbox"
         >
-          <span className={`flex-1 text-left text-[12px] font-medium truncate ${displayValue ? "text-gray-900 dark:text-white" : "text-gray-400"}`}>
+          <span className={`flex-1 text-left text-sm font-medium truncate ${displayValue ? "text-gray-900 dark:text-white" : "text-gray-400"}`}>
             {displayValue || (isOpen ? searchTerm : placeholder)}
           </span>
           <ChevronDown
@@ -203,7 +202,7 @@ export const SearchableSelect = forwardRef<HTMLDivElement, SearchableSelectProps
                   }}
                   onKeyDown={handleKeyDown}
                   placeholder={searchPlaceholder}
-                  className="w-full pl-9 pr-3 py-2.5 bg-white dark:bg-zinc-800 border border-gray-100 dark:border-zinc-700 rounded-lg text-[11px] font-medium outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-colors"
+                  className="w-full pl-9 pr-3 py-2.5 bg-white dark:bg-zinc-800 border border-gray-100 dark:border-zinc-700 rounded-lg text-xs font-medium outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-colors"
                 />
               </div>
             </div>
@@ -211,14 +210,14 @@ export const SearchableSelect = forwardRef<HTMLDivElement, SearchableSelectProps
             {/* Options */}
             <div ref={listRef} className="overflow-y-auto custom-scrollbar max-h-56">
               {allOptions.length === 0 ? (
-                <div className="p-4 text-center text-[10px] font-medium text-gray-400 uppercase tracking-widest">
+                <div className="p-4 text-center text-xs font-medium text-gray-400 uppercase tracking-widest">
                   {emptyMessage}
                 </div>
               ) : (
                 Object.entries(groupedOptions).map(([group, groupOptions]) => (
                   <div key={group}>
                     {group && (
-                      <div className="px-4 py-2.5 bg-gradient-to-r from-gray-50/80 via-white to-gray-50/80 dark:from-zinc-800/50 dark:via-zinc-900 dark:to-zinc-800/50 text-[9px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-[0.2em] border-b border-gray-50 dark:border-zinc-800">
+                      <div className="px-4 py-2 bg-gradient-to-r from-gray-50/80 via-white to-gray-50/80 dark:from-zinc-800/50 dark:via-zinc-900 dark:to-zinc-800/50 text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider border-b border-gray-50 dark:border-zinc-800">
                         {groupLabels[group] || group}
                       </div>
                     )}
@@ -243,11 +242,11 @@ export const SearchableSelect = forwardRef<HTMLDivElement, SearchableSelectProps
                           `}
                         >
                           <div className="flex-1 min-w-0">
-                            <span className={`text-[12px] font-medium block truncate ${isSelected ? "text-emerald-700 dark:text-emerald-300" : "text-gray-700 dark:text-gray-300"}`}>
+                            <span className={`text-sm font-medium block truncate ${isSelected ? "text-emerald-700 dark:text-emerald-300" : "text-gray-700 dark:text-gray-300"}`}>
                               {option.label}
                             </span>
                             {option.meta && (
-                              <span className="text-[9px] font-mono text-gray-400 dark:text-gray-500">
+                              <span className="text-xs font-mono text-gray-400 dark:text-gray-500">
                                 {option.meta}
                               </span>
                             )}
@@ -264,7 +263,7 @@ export const SearchableSelect = forwardRef<HTMLDivElement, SearchableSelectProps
         )}
 
         {error && (
-          <p className="mt-1.5 text-[10px] font-medium text-rose-500 flex items-center gap-1">
+          <p className="mt-1.5 text-xs font-medium text-rose-500 flex items-center gap-1">
             <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
             </svg>
@@ -273,9 +272,6 @@ export const SearchableSelect = forwardRef<HTMLDivElement, SearchableSelectProps
         )}
       </div>
     );
-
-    if (typeof window === "undefined") return null;
-    return createPortal(dropdownContent, document.body);
   }
 );
 

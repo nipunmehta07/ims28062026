@@ -1,6 +1,7 @@
 // src/app/api/inventory/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
+import { prisma } from '@/lib/prisma';
 
 // Types
 interface InventoryItem {
@@ -35,101 +36,6 @@ interface Transaction {
   userId?: string;
 }
 
-// Mock database
-let inventoryItems: InventoryItem[] = [
-  { 
-    id: '1', 
-    name: 'Brass Faucet - Chrome', 
-    sku: 'BF-001', 
-    category: 'Faucets',
-    subCategory: 'Kitchen Faucets',
-    unit: 'Pcs',
-    unitCost: 1800,
-    openingStock: 100,
-    openingStockDate: '2026-06-01',
-    quantity: 150, 
-    minStock: 20,
-    price: 2499, 
-    cost: 1800,
-    location: 'Warehouse A',
-    status: 'In Stock',
-    history: [
-      { id: 'h1', type: 'addition', quantity: 50, previousBalance: 100, newBalance: 150, note: 'Initial stock', date: '2026-06-20T10:00:00Z' },
-    ],
-    createdAt: '2026-06-20T10:00:00Z',
-    updatedAt: '2026-06-28T14:30:00Z'
-  },
-  { 
-    id: '2', 
-    name: 'Shower Head - Rain', 
-    sku: 'SH-002', 
-    category: 'Showers',
-    subCategory: 'Rain Showers',
-    unit: 'Pcs',
-    unitCost: 550,
-    openingStock: 30,
-    openingStockDate: '2026-06-15',
-    quantity: 0, 
-    minStock: 10,
-    price: 899, 
-    cost: 550,
-    location: 'Warehouse B',
-    status: 'Out of Stock',
-    history: [
-      { id: 'h4', type: 'addition', quantity: 30, previousBalance: 0, newBalance: 30, note: 'Initial stock', date: '2026-06-18T09:00:00Z' },
-      { id: 'h5', type: 'deduction', quantity: 30, previousBalance: 30, newBalance: 0, note: 'Order #5678', date: '2026-06-25T11:20:00Z' },
-    ],
-    createdAt: '2026-06-18T09:00:00Z',
-    updatedAt: '2026-06-25T11:20:00Z'
-  },
-  { 
-    id: '3', 
-    name: 'Bathroom Sink - Modern', 
-    sku: 'BS-003', 
-    category: 'Sinks',
-    subCategory: 'Bathroom Sinks',
-    unit: 'Pcs',
-    unitCost: 2400,
-    openingStock: 40,
-    openingStockDate: '2026-06-10',
-    quantity: 23, 
-    minStock: 15,
-    price: 3499, 
-    cost: 2400,
-    location: 'Warehouse A',
-    status: 'Low Stock',
-    history: [
-      { id: 'h6', type: 'addition', quantity: 40, previousBalance: 0, newBalance: 40, note: 'Initial stock', date: '2026-06-15T08:30:00Z' },
-      { id: 'h7', type: 'deduction', quantity: 17, previousBalance: 40, newBalance: 23, note: 'Order #9012', date: '2026-06-28T09:15:00Z' },
-    ],
-    createdAt: '2026-06-15T08:30:00Z',
-    updatedAt: '2026-06-28T09:15:00Z'
-  },
-  { 
-    id: '4', 
-    name: 'Toilet - Dual Flush', 
-    sku: 'TO-004', 
-    category: 'Toilets',
-    subCategory: 'Dual Flush',
-    unit: 'Pcs',
-    unitCost: 3500,
-    openingStock: 60,
-    openingStockDate: '2026-06-05',
-    quantity: 45, 
-    minStock: 10,
-    price: 4999, 
-    cost: 3500,
-    location: 'Warehouse C',
-    status: 'In Stock',
-    history: [
-      { id: 'h8', type: 'addition', quantity: 60, previousBalance: 0, newBalance: 60, note: 'Initial stock', date: '2026-06-10T11:00:00Z' },
-      { id: 'h9', type: 'deduction', quantity: 15, previousBalance: 60, newBalance: 45, note: 'Order #3456', date: '2026-06-27T16:45:00Z' },
-    ],
-    createdAt: '2026-06-10T11:00:00Z',
-    updatedAt: '2026-06-27T16:45:00Z'
-  },
-];
-
 // Validation schemas
 const inventorySchema = z.object({
   name: z.string().min(1, 'Name is required'),
@@ -142,6 +48,7 @@ const inventorySchema = z.object({
   openingStockDate: z.string().min(1, 'Opening stock date is required'),
   minStock: z.number().int().min(0, 'Minimum stock must be 0 or more'),
   location: z.string().min(1, 'Location is required'),
+  description: z.string().optional(),
 });
 
 const transactionSchema = z.object({
@@ -149,6 +56,64 @@ const transactionSchema = z.object({
   quantity: z.number().int().positive('Quantity must be positive'),
   note: z.string().optional(),
 });
+
+// Helper: Map Database Prisma Item model to Frontend expected InventoryItem type
+function mapPrismaItemToFrontend(item: any): InventoryItem {
+  const transactions = item.transactions || [];
+  const firstTx = transactions.find((t: any) => t.reason.startsWith('Opening stock') || t.reason.startsWith('Initial'));
+  const openingStock = firstTx ? firstTx.changeQty : 0;
+  const openingStockDate = firstTx ? firstTx.createdAt.toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
+
+  const status: 'In Stock' | 'Low Stock' | 'Out of Stock' = 
+    item.quantityOnHand === 0 ? 'Out of Stock' :
+    item.quantityOnHand < 5 ? 'Low Stock' : 'In Stock';
+
+  const history: Transaction[] = transactions.map((t: any) => {
+    let type: 'addition' | 'deduction' | 'adjustment' = 'adjustment';
+    if (t.changeQty > 0) {
+      type = 'addition';
+    } else if (t.changeQty < 0) {
+      type = 'deduction';
+    }
+    return {
+      id: t.id,
+      type,
+      quantity: Math.abs(t.changeQty),
+      previousBalance: t.newTotalQty - t.changeQty,
+      newBalance: t.newTotalQty,
+      note: t.reason,
+      date: t.createdAt.toISOString()
+    };
+  });
+
+  // Sort history newest first
+  history.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+  // Use oldest transaction date as createdAt fallback, and newest transaction as updatedAt fallback
+  const oldestTxDate = transactions.length > 0 ? transactions[transactions.length - 1].createdAt.toISOString() : new Date().toISOString();
+  const newestTxDate = transactions.length > 0 ? transactions[0].createdAt.toISOString() : new Date().toISOString();
+
+  return {
+    id: item.id,
+    name: item.name,
+    sku: item.sku,
+    category: item.category,
+    subCategory: item.subCategory || '',
+    unit: item.unit,
+    unitCost: item.unitCost,
+    openingStock: item.openingStock || openingStock,
+    openingStockDate: item.openingStockDate || openingStockDate,
+    quantity: item.quantityOnHand,
+    minStock: item.minStock || 5,
+    price: item.unitCost * 1.4,
+    cost: item.unitCost,
+    location: item.location || 'Warehouse A',
+    status,
+    history,
+    createdAt: oldestTxDate,
+    updatedAt: newestTxDate
+  };
+}
 
 // GET - Fetch inventory items
 export async function GET(request: NextRequest) {
@@ -164,46 +129,61 @@ export async function GET(request: NextRequest) {
 
     // Get single item
     if (id) {
-      const item = inventoryItems.find(item => item.id === id);
+      const item = await prisma.item.findUnique({
+        where: { id },
+        include: {
+          transactions: {
+            orderBy: { createdAt: 'desc' }
+          }
+        }
+      });
       if (!item) {
         return NextResponse.json(
           { error: 'Item not found' },
           { status: 404 }
         );
       }
-      return NextResponse.json({ data: item });
+      return NextResponse.json({ data: mapPrismaItemToFrontend(item) });
     }
 
-    // Filter items
-    let filteredItems = [...inventoryItems];
-
+    // Build database query filters
+    const where: any = {};
     if (search) {
-      const searchLower = search.toLowerCase();
-      filteredItems = filteredItems.filter(item => 
-        item.name.toLowerCase().includes(searchLower) ||
-        item.sku.toLowerCase().includes(searchLower)
-      );
+      where.OR = [
+        { name: { contains: search, mode: 'insensitive' } },
+        { sku: { contains: search, mode: 'insensitive' } }
+      ];
     }
-
     if (category) {
-      filteredItems = filteredItems.filter(item => item.category === category);
+      where.category = category;
     }
 
-    if (subCategory) {
-      filteredItems = filteredItems.filter(item => item.subCategory === subCategory);
+    // Status filter matching safety stock trigger < 5
+    if (status === 'Out of Stock') {
+      where.quantityOnHand = 0;
+    } else if (status === 'Low Stock') {
+      where.quantityOnHand = { gt: 0, lt: 5 };
+    } else if (status === 'In Stock') {
+      where.quantityOnHand = { gte: 5 };
     }
 
-    if (status) {
-      filteredItems = filteredItems.filter(item => item.status === status);
-    }
+    const total = await prisma.item.count({ where });
+    const items = await prisma.item.findMany({
+      where,
+      include: {
+        transactions: {
+          orderBy: { createdAt: 'desc' }
+        }
+      },
+      orderBy: { name: 'asc' },
+      skip: (page - 1) * limit,
+      take: limit
+    });
 
-    const total = filteredItems.length;
-    const start = (page - 1) * limit;
-    const end = start + limit;
-    const paginatedItems = filteredItems.slice(start, end);
+    const mappedItems = items.map(mapPrismaItemToFrontend);
 
     return NextResponse.json({
-      data: paginatedItems,
+      data: mappedItems,
       pagination: {
         page,
         limit,
@@ -213,6 +193,7 @@ export async function GET(request: NextRequest) {
       filters: { search, category, subCategory, status },
     });
   } catch (error) {
+    console.error('GET inventory database fetch error:', error);
     return NextResponse.json(
       { error: 'Failed to fetch inventory' },
       { status: 500 }
@@ -226,37 +207,62 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const validatedData = inventorySchema.parse(body);
 
-    const newItem: InventoryItem = {
-      id: Date.now().toString(),
-      ...validatedData,
-      subCategory: validatedData.subCategory || '',
-      quantity: validatedData.openingStock,
-      price: validatedData.unitCost * 1.4, // Auto-calculate price (40% markup)
-      cost: validatedData.unitCost,
-      status: validatedData.openingStock === 0 ? 'Out of Stock' :
-              validatedData.openingStock <= validatedData.minStock ? 'Low Stock' : 'In Stock',
-      history: [
-        {
-          id: `h${Date.now()}`,
-          type: 'addition',
-          quantity: validatedData.openingStock,
-          previousBalance: 0,
-          newBalance: validatedData.openingStock,
-          note: 'Opening stock',
-          date: new Date().toISOString(),
-        }
-      ],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
+    const newItem = await prisma.$transaction(async (tx) => {
+      // Unique SKU validation
+      const existing = await tx.item.findUnique({
+        where: { sku: validatedData.sku }
+      });
+      if (existing) {
+        throw new Error('An item with this SKU already exists');
+      }
 
-    inventoryItems.push(newItem);
+      const item = await tx.item.create({
+        data: {
+          name: validatedData.name,
+          sku: validatedData.sku,
+          category: validatedData.category,
+          subCategory: validatedData.subCategory || '',
+          unit: validatedData.unit,
+          unitCost: validatedData.unitCost,
+          quantityOnHand: validatedData.openingStock,
+          minStock: validatedData.minStock || 0,
+          location: validatedData.location || '',
+          description: validatedData.description || '',
+          openingStock: validatedData.openingStock,
+          openingStockDate: validatedData.openingStockDate,
+        }
+      });
+
+      if (validatedData.openingStock > 0) {
+        await tx.inventoryTransaction.create({
+          data: {
+            itemId: item.id,
+            changeQty: validatedData.openingStock,
+            newTotalQty: validatedData.openingStock,
+            reason: 'Opening stock',
+            createdAt: new Date(validatedData.openingStockDate)
+          }
+        });
+      }
+
+      return item;
+    });
+
+    const fullItem = await prisma.item.findUnique({
+      where: { id: newItem.id },
+      include: {
+        transactions: {
+          orderBy: { createdAt: 'desc' }
+        }
+      }
+    });
 
     return NextResponse.json({
       message: 'Inventory item created successfully',
-      data: newItem,
+      data: mapPrismaItemToFrontend(fullItem),
     }, { status: 201 });
-  } catch (error) {
+  } catch (error: any) {
+    console.error('POST inventory database write error:', error);
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         { error: 'Validation failed', details: error.issues },
@@ -264,17 +270,20 @@ export async function POST(request: NextRequest) {
       );
     }
     return NextResponse.json(
-      { error: 'Failed to create inventory item' },
+      { error: error.message || 'Failed to create inventory item' },
       { status: 500 }
     );
   }
 }
 
-// PUT - Update inventory item
+// PUT - Update inventory item details or adjust stock levels
 export async function PUT(request: NextRequest) {
   try {
+    const searchParams = request.nextUrl.searchParams;
+    const searchId = searchParams.get('id');
     const body = await request.json();
-    const { id, updateType, ...updateData } = body;
+    const { id: bodyId, updateType, ...updateData } = body;
+    const id = bodyId || searchId;
 
     if (!id) {
       return NextResponse.json(
@@ -283,78 +292,122 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    const itemIndex = inventoryItems.findIndex(item => item.id === id);
-    if (itemIndex === -1) {
+    const currentItem = await prisma.item.findUnique({
+      where: { id },
+      include: { transactions: true }
+    });
+
+    if (!currentItem) {
       return NextResponse.json(
         { error: 'Inventory item not found' },
         { status: 404 }
       );
     }
 
-    const currentItem = inventoryItems[itemIndex];
-    let newQuantity = currentItem.quantity;
-    let transactionNote = '';
+    let finalItem;
 
-    // Handle quantity updates with history tracking
     if (updateType === 'addition' || updateType === 'deduction' || updateType === 'adjustment') {
       const transactionData = transactionSchema.parse({
         type: updateType,
-        quantity: updateData.quantityChange || 0,
+        quantity: updateData.quantity || updateData.quantityChange || 0,
         note: updateData.note || '',
       });
 
-      const previousBalance = currentItem.quantity;
-      
+      const previousBalance = currentItem.quantityOnHand;
+      let newQuantity = previousBalance;
+      let transactionNote = '';
+      let changeQty = 0;
+
       if (updateType === 'addition') {
         newQuantity = previousBalance + transactionData.quantity;
         transactionNote = transactionData.note || 'Stock addition';
+        changeQty = transactionData.quantity;
       } else if (updateType === 'deduction') {
         newQuantity = Math.max(0, previousBalance - transactionData.quantity);
         transactionNote = transactionData.note || 'Stock deduction';
+        changeQty = newQuantity - previousBalance;
       } else {
         newQuantity = transactionData.quantity;
         transactionNote = transactionData.note || 'Stock adjustment';
+        changeQty = newQuantity - previousBalance;
       }
 
-      // Add to history
-      const newTransaction: Transaction = {
-        id: `h${Date.now()}`,
-        type: updateType,
-        quantity: updateType === 'adjustment' ? newQuantity - previousBalance : transactionData.quantity,
-        previousBalance,
-        newBalance: newQuantity,
-        note: transactionNote,
-        date: new Date().toISOString(),
+      finalItem = await prisma.$transaction(async (tx) => {
+        const item = await tx.item.update({
+          where: { id },
+          data: { quantityOnHand: newQuantity }
+        });
+
+        await tx.inventoryTransaction.create({
+          data: {
+            itemId: id,
+            changeQty,
+            newTotalQty: newQuantity,
+            reason: transactionNote,
+          }
+        });
+
+        return item;
+      });
+    } else {
+      // General field update
+      const validatedData = inventorySchema.partial().parse(updateData);
+      const updatePayload: any = {
+        name: validatedData.name,
+        sku: validatedData.sku,
+        category: validatedData.category,
+        subCategory: validatedData.subCategory,
+        unit: validatedData.unit,
+        unitCost: validatedData.unitCost,
+        minStock: validatedData.minStock,
+        location: validatedData.location,
+        description: validatedData.description,
+        openingStockDate: validatedData.openingStockDate,
       };
 
-      currentItem.history.push(newTransaction);
-    } else {
-      // Update other fields
-      const validatedData = inventorySchema.partial().parse(updateData);
-      Object.assign(currentItem, validatedData);
       if (validatedData.openingStock !== undefined) {
-        newQuantity = validatedData.openingStock;
+        updatePayload.quantityOnHand = validatedData.openingStock;
+        updatePayload.openingStock = validatedData.openingStock;
       }
+
+      // Clean undefined keys
+      Object.keys(updatePayload).forEach(key => updatePayload[key] === undefined && delete updatePayload[key]);
+
+      finalItem = await prisma.$transaction(async (tx) => {
+        const item = await tx.item.update({
+          where: { id },
+          data: updatePayload
+        });
+
+        if (validatedData.openingStock !== undefined && validatedData.openingStock !== currentItem.quantityOnHand) {
+          await tx.inventoryTransaction.create({
+            data: {
+              itemId: id,
+              changeQty: validatedData.openingStock - currentItem.quantityOnHand,
+              newTotalQty: validatedData.openingStock,
+              reason: 'Opening stock adjustment',
+            }
+          });
+        }
+        return item;
+      });
     }
 
-    // Update status based on new quantity
-    const itemStatus: 'In Stock' | 'Low Stock' | 'Out of Stock' = newQuantity === 0 ? 'Out of Stock' :
-                       newQuantity <= currentItem.minStock ? 'Low Stock' : 'In Stock';
-
-    const updatedItem = {
-      ...currentItem,
-      quantity: newQuantity,
-      status: itemStatus,
-      updatedAt: new Date().toISOString(),
-    };
-
-    inventoryItems[itemIndex] = updatedItem;
+    const fullUpdatedItem = await prisma.item.findUnique({
+      where: { id: finalItem.id },
+      include: {
+        transactions: {
+          orderBy: { createdAt: 'desc' }
+        }
+      }
+    });
 
     return NextResponse.json({
       message: 'Inventory item updated successfully',
-      data: updatedItem,
+      data: mapPrismaItemToFrontend(fullUpdatedItem),
     });
-  } catch (error) {
+  } catch (error: any) {
+    console.error('PUT inventory database write error:', error);
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         { error: 'Validation failed', details: error.issues },
@@ -362,7 +415,7 @@ export async function PUT(request: NextRequest) {
       );
     }
     return NextResponse.json(
-      { error: 'Failed to update inventory item' },
+      { error: error.message || 'Failed to update inventory item' },
       { status: 500 }
     );
   }
@@ -381,22 +434,28 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    const itemIndex = inventoryItems.findIndex(item => item.id === id);
-    if (itemIndex === -1) {
+    const item = await prisma.item.findUnique({
+      where: { id },
+      include: { transactions: true }
+    });
+
+    if (!item) {
       return NextResponse.json(
         { error: 'Inventory item not found' },
         { status: 404 }
       );
     }
 
-    const deletedItem = inventoryItems[itemIndex];
-    inventoryItems.splice(itemIndex, 1);
+    await prisma.item.delete({
+      where: { id }
+    });
 
     return NextResponse.json({
       message: 'Inventory item deleted successfully',
-      data: deletedItem,
+      data: mapPrismaItemToFrontend(item),
     });
   } catch (error) {
+    console.error('DELETE inventory error:', error);
     return NextResponse.json(
       { error: 'Failed to delete inventory item' },
       { status: 500 }

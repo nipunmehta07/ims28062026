@@ -10,9 +10,12 @@ import toast from "react-hot-toast";
 import { Card } from "./ui/Card";
 import { Button } from "./ui/Button";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell, TableFooter } from "./ui/Table";
+import { useSession } from "next-auth/react";
 
 export default function InwardLedger() {
   const queryClient = useQueryClient(); // Helper to refresh memory
+  const { data: session } = useSession();
+  const isAdmin = session?.user?.role === "ADMIN";
 
   // 2. DATA FETCHING: Replaces useEffect & useState
   const { data: history = [], isLoading } = useQuery({
@@ -159,12 +162,14 @@ export default function InwardLedger() {
           <TableHeader>
             <TableRow hover={false} className="bg-gradient-to-r from-emerald-50/50 via-white to-teal-50/50 dark:from-emerald-950/30 dark:via-zinc-900 dark:to-teal-950/30">
               <TableHead className="w-10">
-                <input 
-                  type="checkbox" 
-                  className="w-4 h-4 rounded border-gray-300 accent-black cursor-pointer"
-                  checked={selectedIds.length === filteredHistory.length && filteredHistory.length > 0}
-                  onChange={toggleSelectAll}
-                />
+                {isAdmin && (
+                  <input 
+                    type="checkbox" 
+                    className="w-4 h-4 rounded border-gray-300 accent-black cursor-pointer"
+                    checked={selectedIds.length === filteredHistory.length && filteredHistory.length > 0}
+                    onChange={toggleSelectAll}
+                  />
+                )}
               </TableHead>
               <TableHead>Date Arrived</TableHead>
               <TableHead>Reference</TableHead>
@@ -185,12 +190,14 @@ export default function InwardLedger() {
                 return (
                   <TableRow key={log.id} selected={isSelected}>
                     <TableCell>
-                      <input 
-                        type="checkbox" 
-                        className="w-4 h-4 rounded border-gray-300 accent-black cursor-pointer"
-                        checked={isSelected}
-                        onChange={() => toggleSelectItem(log.id)}
-                      />
+                      {isAdmin && (
+                        <input 
+                          type="checkbox" 
+                          className="w-4 h-4 rounded border-gray-300 accent-black cursor-pointer"
+                          checked={isSelected}
+                          onChange={() => toggleSelectItem(log.id)}
+                        />
+                      )}
                     </TableCell>
                     <TableCell onClick={() => toggleSelectItem(log.id)}>
                       {new Date(log.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
@@ -214,14 +221,16 @@ export default function InwardLedger() {
                       </p>
                     </TableCell>
                     <TableCell>
-                      <div className="flex items-center justify-end gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Button variant="ghost" size="sm" onClick={() => { setEditingLog(log); setShowForm(true); }}>
-                          Edit
-                        </Button>
-                        <Button variant="ghost" size="sm" onClick={() => handleDelete(log.id)} className="text-rose-400 hover:text-rose-600">
-                          Delete
-                        </Button>
-                      </div>
+                      {isAdmin && (
+                        <div className="flex items-center justify-end gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Button variant="ghost" size="sm" onClick={() => { setEditingLog(log); setShowForm(true); }}>
+                            Edit
+                          </Button>
+                          <Button variant="ghost" size="sm" onClick={() => handleDelete(log.id)} className="text-rose-400 hover:text-rose-600">
+                            Delete
+                          </Button>
+                        </div>
+                      )}
                     </TableCell>
                   </TableRow>
                 )

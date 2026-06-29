@@ -14,9 +14,15 @@ model Item {
   sku             String   @unique
   name            String
   category        String   
+  subCategory     String?
   quantityOnHand  Float    @default(0)
   unit            String   @default("pcs")
   unitCost        Float    @default(0.0)
+  minStock        Float    @default(0)
+  location        String?
+  description     String?
+  openingStock    Float    @default(0)
+  openingStockDate String?
   
   // Relationships
   boms    Bom[]    @relation("MasterItem")
