@@ -20,7 +20,6 @@ const navItems = [
   { name: 'Inventory', href: '/inventory', icon: Package },
   { name: 'Orders', href: '/orders', icon: ShoppingCart },
   { name: 'Manufacturing', href: '/manufacturing', icon: Factory },
-  { name: 'BOM', href: '/bom', icon: ClipboardList },
   { name: 'Customers', href: '/customers', icon: Users },
   { name: 'Suppliers', href: '/suppliers', icon: Truck },
   { name: 'Reports', href: '/reports', icon: FileText },
@@ -67,8 +66,8 @@ export function Topbar({ onCommandPalette }: { onCommandPalette: () => void }) {
             >
               {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
-            <span className="text-xl font-semibold text-white tracking-tight">Zoie</span>
-            <span className="hidden md:inline text-xs text-white/40 font-medium tracking-wider uppercase ml-1">ERP</span>
+            <span className="text-xl font-bold text-white tracking-[0.15em] uppercase font-display">Zoie</span>
+            <span className="hidden md:inline text-[10px] text-white/50 font-medium tracking-[0.2em] uppercase ml-1.5 font-display">Bathware</span>
           </div>
 
           {/* Center: Desktop Navigation */}

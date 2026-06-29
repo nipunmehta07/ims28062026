@@ -140,8 +140,7 @@ export default function Dashboard() {
           <div className="space-y-1">
             <div className="flex items-center gap-2.5">
               <span
-                className="text-[22px] font-semibold text-text-primary tracking-[-0.02em] leading-tight"
-
+                className="text-[22px] font-bold text-text-primary tracking-[-0.02em] leading-tight font-display"
               >
                 {greeting}, {displayName}!
               </span>
@@ -170,8 +169,7 @@ export default function Dashboard() {
           <div className="absolute inset-0 bg-gradient-to-br from-success/5 via-transparent to-transparent opacity-50" />
           <div className="flex items-center justify-between relative z-10">
             <span
-              className="text-[10px] font-medium text-text-secondary uppercase tracking-[0.14em]"
-
+              className="text-[10px] font-semibold text-text-secondary uppercase tracking-[0.14em] font-display"
             >
               Total Revenue
             </span>
@@ -181,8 +179,7 @@ export default function Dashboard() {
           </div>
           <div className="mt-4 flex items-end justify-between relative z-10">
             <span
-              className="text-[26px] font-bold text-text-primary leading-none tracking-[-0.02em] stat-number"
-
+              className="text-[26px] font-bold text-text-primary leading-none tracking-[-0.02em] stat-number font-display"
             >
               ₹{stats.totalRevenue.toLocaleString('en-IN')}
             </span>
@@ -198,8 +195,7 @@ export default function Dashboard() {
           <div className="absolute inset-0 bg-gradient-to-br from-accent/5 via-transparent to-transparent opacity-50" />
           <div className="flex items-center justify-between relative z-10">
             <span
-              className="text-[10px] font-medium text-text-secondary uppercase tracking-[0.14em]"
-
+              className="text-[10px] font-semibold text-text-secondary uppercase tracking-[0.14em] font-display"
             >
               Active Orders
             </span>
@@ -209,8 +205,7 @@ export default function Dashboard() {
           </div>
           <div className="mt-4 flex items-end justify-between relative z-10">
             <span
-              className="text-[26px] font-bold text-text-primary leading-none tracking-[-0.02em] stat-number"
-
+              className="text-[26px] font-bold text-text-primary leading-none tracking-[-0.02em] stat-number font-display"
             >
               {stats.activeOrders}
             </span>
@@ -226,8 +221,7 @@ export default function Dashboard() {
           <div className="absolute inset-0 bg-gradient-to-br from-info/5 via-transparent to-transparent opacity-50" />
           <div className="flex items-center justify-between relative z-10">
             <span
-              className="text-[10px] font-medium text-text-secondary uppercase tracking-[0.14em]"
-
+              className="text-[10px] font-semibold text-text-secondary uppercase tracking-[0.14em] font-display"
             >
               Inventory Value
             </span>
@@ -237,8 +231,7 @@ export default function Dashboard() {
           </div>
           <div className="mt-4 flex items-end justify-between relative z-10">
             <span
-              className="text-[26px] font-bold text-text-primary leading-none tracking-[-0.02em] stat-number"
-
+              className="text-[26px] font-bold text-text-primary leading-none tracking-[-0.02em] stat-number font-display"
             >
               ₹{stats.inventoryValue.toLocaleString('en-IN')}
             </span>
@@ -254,8 +247,7 @@ export default function Dashboard() {
           <div className="absolute inset-0 bg-gradient-to-br from-error/5 via-transparent to-transparent opacity-50" />
           <div className="flex items-center justify-between relative z-10">
             <span
-              className="text-[10px] font-medium text-text-secondary uppercase tracking-[0.14em]"
-
+              className="text-[10px] font-semibold text-text-secondary uppercase tracking-[0.14em] font-display"
             >
               Low Stock Items
             </span>
@@ -265,8 +257,7 @@ export default function Dashboard() {
           </div>
           <div className="mt-4 flex items-end justify-between relative z-10">
             <span
-              className={`text-[26px] font-bold leading-none tracking-[-0.02em] stat-number ${stats.lowStock > 0 ? 'text-error' : 'text-text-primary'}`}
-
+              className={`text-[26px] font-bold leading-none tracking-[-0.02em] stat-number font-display ${stats.lowStock > 0 ? 'text-error' : 'text-text-primary'}`}
             >
               {stats.lowStock.toString().padStart(2, '0')}
             </span>
@@ -291,15 +282,13 @@ export default function Dashboard() {
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-6">
             <div>
               <h3
-                className="text-[10px] font-medium text-text-secondary tracking-[0.14em] uppercase"
-
+                className="text-[10px] font-semibold text-text-secondary tracking-[0.14em] uppercase font-display"
               >
                 Revenue Flow
               </h3>
               <div className="flex items-center gap-2 mt-1.5">
                 <span
-                  className="text-[22px] font-semibold text-text-primary leading-none tracking-[-0.02em] stat-number"
-
+                  className="text-[22px] font-bold text-text-primary leading-none tracking-[-0.02em] stat-number font-display"
                 >
                   ₹{stats.totalRevenue.toLocaleString('en-IN')}
                 </span>
@@ -387,8 +376,7 @@ export default function Dashboard() {
         <div className="glass-card rounded-2xl p-5 flex flex-col justify-between">
           <div>
             <h3
-              className="text-[10px] font-medium text-text-secondary uppercase tracking-[0.14em] mb-4"
-
+              className="text-[10px] font-semibold text-text-secondary uppercase tracking-[0.14em] mb-4 font-display"
             >
               Infrastructure Logs
             </h3>
@@ -428,8 +416,7 @@ export default function Dashboard() {
         {/* Market Demand Panel */}
         <div className="glass-card glow-card rounded-2xl p-5">
           <h3
-            className="text-[10px] font-medium text-text-secondary uppercase tracking-[0.14em] mb-4"
-
+            className="text-[10px] font-semibold text-text-secondary uppercase tracking-[0.14em] mb-4 font-display"
           >
             Product Category Demand
           </h3>
@@ -471,8 +458,7 @@ export default function Dashboard() {
         <div className="glass-card glow-card rounded-2xl p-5 flex flex-col justify-between">
           <div>
             <h3
-              className="text-[10px] font-medium text-text-secondary uppercase tracking-[0.14em] mb-3"
-
+              className="text-[10px] font-semibold text-text-secondary uppercase tracking-[0.14em] mb-3 font-display"
             >
               Critical Action Items
             </h3>
@@ -512,8 +498,7 @@ export default function Dashboard() {
       {/* Quick Navigation / Action Hub */}
       <div className="glass-card glow-card rounded-2xl p-5 stagger-enter" style={{ animationDelay: '300ms' }}>
         <h3
-          className="text-[10px] font-medium text-text-secondary uppercase tracking-[0.14em] mb-3"
-
+          className="text-[10px] font-semibold text-text-secondary uppercase tracking-[0.14em] mb-3 font-display"
         >
           Action Hub
         </h3>
