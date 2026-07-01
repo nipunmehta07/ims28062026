@@ -2,6 +2,95 @@
 import { prisma } from "@/lib/prisma"
 import { revalidatePath } from "next/cache"
 import { startOfDay, subDays, format } from "date-fns";
+import { z } from "zod";
+
+// ==========================================
+// ZOD VALIDATION SCHEMAS
+// ==========================================
+
+const addItemSchema = z.object({
+  name: z.string().min(1, "Name is required").max(200),
+  sku: z.string().min(1, "SKU is required").max(50),
+  category: z.string().min(1, "Category is required"),
+  subCategory: z.string().optional(),
+  unit: z.string().min(1, "Unit is required"),
+  unitCost: z.number().min(0, "Unit cost must be non-negative"),
+  initialQty: z.number().min(0, "Initial quantity must be non-negative"),
+  openingStockDate: z.string().min(1, "Opening stock date is required"),
+  minStock: z.number().min(0).optional(),
+  location: z.string().optional(),
+  description: z.string().optional(),
+});
+
+const updateItemSchema = z.object({
+  name: z.string().min(1, "Name is required").max(200),
+  sku: z.string().min(1, "SKU is required").max(50),
+  category: z.string().min(1, "Category is required"),
+  subCategory: z.string().optional(),
+  unit: z.string().min(1, "Unit is required"),
+  unitCost: z.number().min(0, "Unit cost must be non-negative"),
+  minStock: z.number().min(0).optional(),
+  location: z.string().optional(),
+  description: z.string().optional(),
+});
+
+const stockInwardSchema = z.object({
+  itemId: z.string().min(1),
+  quantity: z.number().positive("Quantity must be positive"),
+  reference: z.string().min(1, "Reference is required"),
+  date: z.string().min(1, "Date is required"),
+  notes: z.string().optional(),
+});
+
+const bomSchema = z.object({
+  name: z.string().min(1, "BOM name is required"),
+  itemId: z.string().min(1, "Target item is required"),
+  components: z.array(z.object({
+    itemId: z.string().min(1),
+    quantity: z.number().positive("Quantity must be positive"),
+  })).min(1, "At least one component is required"),
+});
+
+const produceBomSchema = z.object({
+  bomId: z.string().min(1),
+  quantityToBuild: z.number().int().positive("Build quantity must be at least 1"),
+  buildDate: z.string().min(1),
+  notes: z.string().optional(),
+});
+
+const salesOrderSchema = z.object({
+  customerName: z.string().min(1, "Customer name is required"),
+  orderDate: z.string().min(1, "Order date is required"),
+  discountPercent: z.number().min(0).max(100),
+  items: z.array(z.object({
+    itemId: z.string().min(1),
+    quantity: z.number().int().positive(),
+    salePrice: z.number().min(0),
+  })).min(1, "At least one item is required"),
+});
+
+const supplierSchema = z.object({
+  name: z.string().min(1, "Supplier name is required").max(200),
+  contactPerson: z.string().optional(),
+  phone: z.string().optional(),
+  email: z.string().email("Invalid email").optional().or(z.literal("")),
+  address: z.string().optional(),
+  materials: z.string().optional(),
+  leadTimeDays: z.number().min(0).optional(),
+  rating: z.enum(["A+", "A", "B+", "B"]).optional(),
+  status: z.enum(["Active", "Preferred", "Inactive"]).optional(),
+  notes: z.string().optional(),
+});
+
+const customerSchema = z.object({
+  name: z.string().min(1, "Customer name is required").max(200),
+  contactPerson: z.string().optional(),
+  phone: z.string().optional(),
+  email: z.string().email("Invalid email").optional().or(z.literal("")),
+  address: z.string().optional(),
+  notes: z.string().optional(),
+});
+
 // ==========================================
 // 1. MASTER INVENTORY
 // ==========================================
@@ -33,7 +122,8 @@ export async function stockInwardAction(data: {
   quantity: number, 
   reference: string, 
   date: string,
-  notes?: string // Add this optional field
+  notes?: string,
+  batchNumber?: string
 }) {
   const result = await prisma.$transaction(async (tx) => {
     const updatedItem = await tx.item.update({
@@ -46,8 +136,8 @@ export async function stockInwardAction(data: {
         itemId: data.itemId,
         changeQty: data.quantity,
         newTotalQty: updatedItem.quantityOnHand,
-        // We can append the notes to the reason or store it if your schema has a notes field
         reason: `Inward: ${data.reference}${data.notes ? ` (${data.notes})` : ''}`,
+        batchNumber: data.batchNumber || null,
         createdAt: new Date(data.date)
       }
     });
@@ -221,7 +311,8 @@ export async function updateInwardAction(transactionId: string, data: {
   quantity: number, 
   reference: string, 
   date: string,
-  notes?: string 
+  notes?: string,
+  batchNumber?: string
 }) {
   const result = await prisma.$transaction(async (tx) => {
     // 1. Get the old transaction to see what the previous quantity was
@@ -258,6 +349,7 @@ export async function updateInwardAction(transactionId: string, data: {
         changeQty: data.quantity,
         newTotalQty: updatedItem.quantityOnHand,
         reason: `Inward: ${data.reference}${data.notes ? ` (${data.notes})` : ''}`,
+        batchNumber: data.batchNumber || null,
         createdAt: new Date(data.date)
       }
     });
@@ -497,22 +589,20 @@ export async function bulkAddBomsAction(boms: {
 // ==========================================
 
 export async function getDashboardStats() {
-  const [activeOrdersCount, lowStockCount, revenueAggregate, inventoryItems] = await Promise.all([
-    // 1. Get Active Orders count [cite: 7]
+  const [activeOrdersCount, revenueAggregate, allItems] = await Promise.all([
+    // 1. Get Active Orders count
     prisma.salesOrder.count({ where: { status: "PENDING" } }),
     
-    // 2. Get Low Stock count [cite: 2, 6]
-    prisma.item.count({ where: { quantityOnHand: { lt: 5 } } }),
-    
-    // 3. Get Total Revenue sum [cite: 7]
+    // 2. Get Total Revenue sum
     prisma.salesOrder.aggregate({ _sum: { totalAmount: true } }),
     
-    // 4. Get the actual list of items to calculate value [cite: 2]
-    prisma.item.findMany({ select: { quantityOnHand: true, unitCost: true } })
+    // 3. Get all items to evaluate minStock dynamically and calculate value
+    prisma.item.findMany({ select: { quantityOnHand: true, unitCost: true, minStock: true } })
   ]);
 
-  // FIX: Use 'inventoryItems' (the array) instead of 'items' (the count)
-  const inventoryValue = inventoryItems.reduce(
+  const lowStockCount = allItems.filter(item => item.quantityOnHand <= item.minStock && item.minStock > 0).length;
+
+  const inventoryValue = allItems.reduce(
     (acc, item) => acc + (item.quantityOnHand * item.unitCost), 0
   );
 
@@ -732,7 +822,8 @@ async function createLog(
   change: number, 
   total: number, 
   reason: string, 
-  customDate?: Date
+  customDate?: Date,
+  batchNumber?: string
 ) {
   return await tx.inventoryTransaction.create({
     data: {
@@ -740,6 +831,7 @@ async function createLog(
       changeQty: change,
       newTotalQty: total, // Map the 'total' parameter to the schema field
       reason: reason,
+      batchNumber: batchNumber || null,
       // Only include createdAt if a custom dispatch date was provided
       ...(customDate && { createdAt: customDate }) 
     }
@@ -748,14 +840,16 @@ async function createLog(
 
 export async function generateBackupData() {
   try {
-    const [inventory, history, boms, bomComponents, salesOrders, salesOrderItems, productionLogs] = await Promise.all([
+    const [inventory, history, boms, bomComponents, salesOrders, salesOrderItems, productionLogs, suppliers, customers] = await Promise.all([
       prisma.item.findMany(),
       prisma.inventoryTransaction.findMany(),
       prisma.bom.findMany(),
       prisma.bomComponent.findMany(),
       prisma.salesOrder.findMany(),
       prisma.salesOrderItem.findMany(),
-      prisma.productionLog.findMany() // ADD THIS LINE
+      prisma.productionLog.findMany(),
+      prisma.supplier.findMany(),
+      prisma.customer.findMany()
     ]);
 
     const backupPayload = {
@@ -767,7 +861,9 @@ export async function generateBackupData() {
         bomComponents,
         salesOrders,
         salesOrderItems,
-        productionLogs // INCLUDE IN PAYLOAD
+        productionLogs,
+        suppliers,
+        customers
       }
     };
 
@@ -778,24 +874,27 @@ export async function generateBackupData() {
 }
 export async function factoryResetInstance() {
   try {
-    // 1. Try Prisma's safe deletion first (This handles mapping automatically)
-    // We execute these in a specific order to avoid Foreign Key conflicts
     await prisma.$transaction([
+      prisma.salesOrderItem.deleteMany(),
+      prisma.salesOrder.deleteMany(),
       prisma.inventoryTransaction.deleteMany(),
+      prisma.productionLog.deleteMany(),
+      prisma.bomComponent.deleteMany(),
+      prisma.bom.deleteMany(),
       prisma.item.deleteMany(),
+      prisma.supplier.deleteMany(),
+      prisma.customer.deleteMany(),
     ]);
 
     return { success: true };
   } catch (error: any) {
     console.error("Standard Reset Failed, trying Force Wipe:", error.message);
 
-    // 2. Fallback: If Prisma fails, use a "Nuclear" Raw SQL approach
     try {
-      // This identifies tables regardless of Case Sensitivity (item vs Item)
       const tables: any[] = await prisma.$queryRaw`
         SELECT tablename FROM pg_tables 
         WHERE schemaname = 'public' 
-        AND tablename ILIKE ANY (ARRAY['item%', 'inward%', 'inventory%']);
+        AND tablename ILIKE ANY (ARRAY['item%', 'inward%', 'inventory%', 'supplier%', 'customer%', 'sales%']);
       `;
 
       if (tables.length > 0) {
@@ -816,31 +915,34 @@ export async function factoryResetInstance() {
 export async function restoreBackupData(backupJson: string) {
   try {
     const parsed = JSON.parse(backupJson);
-    const { inventory, history, boms, bomComponents, salesOrders, salesOrderItems, productionLogs } = parsed.data;
+    const { inventory, history, boms, bomComponents, salesOrders, salesOrderItems, productionLogs, suppliers, customers } = parsed.data;
 
     await prisma.$transaction(async (tx) => {
-      // STEP 1: WIPE (Children first, Parents last)
+      // STEP 1: WIPE
       await tx.salesOrderItem.deleteMany();
       await tx.salesOrder.deleteMany();
       await tx.inventoryTransaction.deleteMany();
-      await tx.productionLog.deleteMany(); // CLEAR EXISTING LOGS
+      await tx.productionLog.deleteMany();
       await tx.bomComponent.deleteMany();
       await tx.bom.deleteMany();
       await tx.item.deleteMany();
+      await tx.supplier.deleteMany();
+      await tx.customer.deleteMany();
 
       // STEP 2: RESTORE PARENTS
+      if (suppliers?.length > 0) await tx.supplier.createMany({ data: suppliers });
+      if (customers?.length > 0) await tx.customer.createMany({ data: customers });
       if (inventory?.length > 0) await tx.item.createMany({ data: inventory });
       if (boms?.length > 0) await tx.bom.createMany({ data: boms });
 
       // STEP 3: RESTORE CHILDREN
       if (bomComponents?.length > 0) await tx.bomComponent.createMany({ data: bomComponents });
       
-      // RESTORE THE MISSING HISTORY
       if (productionLogs?.length > 0) {
         await tx.productionLog.createMany({ 
           data: productionLogs.map((log: any) => ({
             ...log,
-            createdAt: new Date(log.createdAt) // Ensure date is parsed correctly
+            createdAt: new Date(log.createdAt)
           })) 
         });
       }
@@ -853,7 +955,7 @@ export async function restoreBackupData(backupJson: string) {
           data: history.map((h: any) => ({ ...h, createdAt: new Date(h.createdAt) })) 
         });
       }
-    }, { timeout: 90000 }); // High timeout for large datasets
+    }, { timeout: 90000 });
 
     return { success: true };
   } catch (error: any) {
@@ -1129,3 +1231,471 @@ export async function getAdjustedInvoiceValue(orderId: string) {
     netValue: order.totalAmount - totalReturnedValue
   };
 }
+
+// ==========================================
+// 7. SUPPLIER DIRECTORY
+// ==========================================
+
+export async function getSuppliers() {
+  return await prisma.supplier.findMany({
+    orderBy: { name: 'asc' }
+  });
+}
+
+export async function addSupplierAction(data: {
+  name: string;
+  contactPerson?: string;
+  phone?: string;
+  email?: string;
+  address?: string;
+  materials?: string;
+  leadTimeDays?: number;
+  rating?: string;
+  status?: string;
+  notes?: string;
+}) {
+  const validated = supplierSchema.parse(data);
+  
+  return await prisma.supplier.create({
+    data: {
+      name: validated.name,
+      contactPerson: validated.contactPerson || '',
+      phone: validated.phone || '',
+      email: validated.email || '',
+      address: validated.address || '',
+      materials: validated.materials || '',
+      leadTimeDays: validated.leadTimeDays || 0,
+      rating: validated.rating || 'B',
+      status: validated.status || 'Active',
+      notes: validated.notes || '',
+    }
+  });
+}
+
+export async function updateSupplierAction(supplierId: string, data: {
+  name: string;
+  contactPerson?: string;
+  phone?: string;
+  email?: string;
+  address?: string;
+  materials?: string;
+  leadTimeDays?: number;
+  rating?: string;
+  status?: string;
+  notes?: string;
+}) {
+  const validated = supplierSchema.parse(data);
+  
+  return await prisma.supplier.update({
+    where: { id: supplierId },
+    data: {
+      name: validated.name,
+      contactPerson: validated.contactPerson || '',
+      phone: validated.phone || '',
+      email: validated.email || '',
+      address: validated.address || '',
+      materials: validated.materials || '',
+      leadTimeDays: validated.leadTimeDays || 0,
+      rating: validated.rating || 'B',
+      status: validated.status || 'Active',
+      notes: validated.notes || '',
+    }
+  });
+}
+
+export async function deleteSupplierAction(supplierId: string) {
+  return await prisma.supplier.delete({
+    where: { id: supplierId }
+  });
+}
+
+// ==========================================
+// 8. CUSTOMER DIRECTORY
+// ==========================================
+
+export async function getCustomers() {
+  return await prisma.customer.findMany({
+    include: {
+      salesOrders: {
+        select: {
+          id: true,
+          totalAmount: true,
+          status: true,
+          orderDate: true,
+        }
+      }
+    },
+    orderBy: { name: 'asc' }
+  });
+}
+
+export async function addCustomerAction(data: {
+  name: string;
+  contactPerson?: string;
+  phone?: string;
+  email?: string;
+  address?: string;
+  notes?: string;
+}) {
+  const validated = customerSchema.parse(data);
+  
+  return await prisma.customer.create({
+    data: {
+      name: validated.name,
+      contactPerson: validated.contactPerson || '',
+      phone: validated.phone || '',
+      email: validated.email || '',
+      address: validated.address || '',
+      notes: validated.notes || '',
+    }
+  });
+}
+
+export async function updateCustomerAction(customerId: string, data: {
+  name: string;
+  contactPerson?: string;
+  phone?: string;
+  email?: string;
+  address?: string;
+  notes?: string;
+}) {
+  const validated = customerSchema.parse(data);
+  
+  return await prisma.customer.update({
+    where: { id: customerId },
+    data: {
+      name: validated.name,
+      contactPerson: validated.contactPerson || '',
+      phone: validated.phone || '',
+      email: validated.email || '',
+      address: validated.address || '',
+      notes: validated.notes || '',
+    }
+  });
+}
+
+export async function deleteCustomerAction(customerId: string) {
+  // Check if customer has linked sales orders
+  const linkedOrders = await prisma.salesOrder.count({
+    where: { customerId }
+  });
+  
+  if (linkedOrders > 0) {
+    throw new Error(`Cannot delete: This customer has ${linkedOrders} linked sales order(s). Remove or reassign them first.`);
+  }
+  
+  return await prisma.customer.delete({
+    where: { id: customerId }
+  });
+}
+
+// ==========================================
+// 9. LOW STOCK ALERTS
+// ==========================================
+
+export async function getLowStockAlerts() {
+  // Use raw sql query to filter database-side
+  const items: any[] = await prisma.$queryRaw`
+    SELECT * FROM "item"
+    WHERE "quantityOnHand" <= "minStock" AND "minStock" > 0
+    ORDER BY "quantityOnHand" ASC
+  `;
+
+  // Fallback: manual filter for items below their own minStock
+  const allItems = await prisma.item.findMany({
+    orderBy: { quantityOnHand: 'asc' }
+  });
+
+  const lowStockItems = allItems.filter(item => item.quantityOnHand <= item.minStock && item.minStock > 0);
+
+  // Calculate average daily consumption from last 30 days
+  const thirtyDaysAgo = subDays(new Date(), 30);
+  const consumptionData = await prisma.inventoryTransaction.groupBy({
+    by: ['itemId'],
+    where: {
+      changeQty: { lt: 0 },
+      createdAt: { gte: thirtyDaysAgo }
+    },
+    _sum: { changeQty: true }
+  });
+
+  return lowStockItems.map(item => {
+    const consumption = consumptionData.find(c => c.itemId === item.id);
+    const totalConsumed = Math.abs(consumption?._sum?.changeQty || 0);
+    const avgDailyConsumption = totalConsumed / 30;
+    const daysOfStockLeft = avgDailyConsumption > 0 
+      ? Math.round(item.quantityOnHand / avgDailyConsumption)
+      : null;
+    const suggestedReorder = avgDailyConsumption > 0
+      ? Math.ceil(avgDailyConsumption * 14) // 2 weeks of supply
+      : Math.max(item.minStock * 2, 10);
+
+    return {
+      ...item,
+      avgDailyConsumption: Math.round(avgDailyConsumption * 100) / 100,
+      daysOfStockLeft,
+      suggestedReorder,
+      severity: item.quantityOnHand === 0 ? 'CRITICAL' 
+        : item.quantityOnHand <= item.minStock * 0.5 ? 'HIGH'
+        : 'MEDIUM'
+    };
+  });
+}
+
+export async function getAuditLogs() {
+  const [txs, builds] = await Promise.all([
+    prisma.inventoryTransaction.findMany({
+      take: 100,
+      orderBy: { createdAt: 'desc' },
+      include: { item: { select: { name: true } } }
+    }),
+    prisma.productionLog.findMany({
+      take: 100,
+      orderBy: { createdAt: 'desc' }
+    })
+  ]);
+
+  const txLogs = txs.map(t => ({
+    id: t.id,
+    timestamp: t.createdAt.toISOString(),
+    userId: t.userId || 'system',
+    userName: t.userName || 'System Auto',
+    userRole: t.userId ? 'STAFF' : 'SYSTEM',
+    action: t.changeQty > 0 ? ('CREATE' as const) : ('DELETE' as const),
+    entityType: 'InventoryTransaction',
+    entityId: t.itemId,
+    entityName: `${t.item?.name || 'Item'} (${t.changeQty > 0 ? '+' : ''}${t.changeQty})`,
+    changes: [
+      { field: 'changeQty', oldValue: null, newValue: t.changeQty },
+      { field: 'reason', oldValue: null, newValue: t.reason }
+    ]
+  }));
+
+  const buildLogs = builds.map(b => ({
+    id: b.id,
+    timestamp: b.createdAt.toISOString(),
+    userId: b.userId || 'system',
+    userName: b.userName || 'System Auto',
+    userRole: b.userId ? 'STAFF' : 'SYSTEM',
+    action: 'CREATE' as const,
+    entityType: 'ProductionLog',
+    entityId: b.bomId,
+    entityName: `Build: ${b.bomName} (Qty: ${b.quantityBuilt})`,
+    changes: [
+      { field: 'quantityBuilt', oldValue: null, newValue: b.quantityBuilt },
+      { field: 'notes', oldValue: null, newValue: b.notes }
+    ]
+  }));
+
+  const allLogs = [...txLogs, ...buildLogs];
+  allLogs.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  return allLogs.slice(0, 100);
+}
+
+// ==========================================
+// 10. USER & RBAC MANAGEMENT
+// ==========================================
+
+import bcrypt from "bcryptjs";
+
+export async function getUsers() {
+  return await prisma.user.findMany({
+    select: {
+      id: true,
+      name: true,
+      username: true,
+      email: true,
+      role: true,
+    },
+    orderBy: { username: 'asc' }
+  });
+}
+
+export async function createUserAction(data: {
+  name: string;
+  username: string;
+  email: string;
+  role: string;
+  password?: string;
+}) {
+  const hashedPassword = await bcrypt.hash(data.password || "Zoie123!", 10);
+  
+  return await prisma.user.create({
+    data: {
+      name: data.name,
+      username: data.username,
+      email: data.email,
+      role: data.role,
+      password: hashedPassword,
+    }
+  });
+}
+
+export async function updateUserRoleAction(userId: string, role: string) {
+  return await prisma.user.update({
+    where: { id: userId },
+    data: { role }
+  });
+}
+
+export async function deleteUserAction(userId: string) {
+  return await prisma.user.delete({
+    where: { id: userId }
+  });
+}
+
+// ==========================================
+// 11. ADVANCED ANALYTICS REPORTS
+// ==========================================
+
+export async function getABCAndAgingReports() {
+  const [items, transactions] = await Promise.all([
+    prisma.item.findMany({
+      select: {
+        id: true,
+        name: true,
+        sku: true,
+        category: true,
+        quantityOnHand: true,
+        unitCost: true
+      }
+    }),
+    prisma.inventoryTransaction.findMany({
+      orderBy: { createdAt: 'desc' },
+      select: {
+        itemId: true,
+        createdAt: true
+      }
+    })
+  ]);
+
+  // 1. ABC Analysis: Calculate total value per item and sort
+  const itemsWithValue = items.map(item => ({
+    ...item,
+    totalVal: item.quantityOnHand * item.unitCost
+  }));
+
+  const totalInvValue = itemsWithValue.reduce((sum, item) => sum + item.totalVal, 0);
+
+  itemsWithValue.sort((a, b) => b.totalVal - a.totalVal);
+
+  let cumulativeVal = 0;
+  const abcData = itemsWithValue.map((item) => {
+    cumulativeVal += item.totalVal;
+    const cumulativePercent = totalInvValue > 0 ? (cumulativeVal / totalInvValue) * 100 : 0;
+    
+    // Class A: Top 70% of value
+    // Class B: Next 20% of value (70% - 90%)
+    // Class C: Bottom 10% of value (90% - 100%)
+    let group: 'A' | 'B' | 'C' = 'C';
+    if (cumulativePercent <= 70) group = 'A';
+    else if (cumulativePercent <= 90) group = 'B';
+
+    return {
+      id: item.id,
+      name: item.name,
+      sku: item.sku,
+      category: item.category,
+      quantityOnHand: item.quantityOnHand,
+      unitCost: item.unitCost,
+      totalVal: item.totalVal,
+      group
+    };
+  });
+
+  // 2. Stock Aging Analysis: Days since last transaction
+  const now = new Date();
+  const agingData = items.map(item => {
+    const itemTx = transactions.find(t => t.itemId === item.id);
+    const lastActive = itemTx ? new Date(itemTx.createdAt) : now;
+    const daysSinceActive = Math.floor((now.getTime() - lastActive.getTime()) / (1000 * 60 * 60 * 24));
+
+    let ageBucket: '0-30 Days' | '31-90 Days' | '91+ Days' = '0-30 Days';
+    if (daysSinceActive > 90) ageBucket = '91+ Days';
+    else if (daysSinceActive > 30) ageBucket = '31-90 Days';
+
+    return {
+      id: item.id,
+      name: item.name,
+      sku: item.sku,
+      category: item.category,
+      quantityOnHand: item.quantityOnHand,
+      daysSinceActive,
+      ageBucket
+    };
+  });
+
+  return {
+    abc: abcData,
+    aging: agingData,
+    summary: {
+      aCount: abcData.filter(i => i.group === 'A').length,
+      bCount: abcData.filter(i => i.group === 'B').length,
+      cCount: abcData.filter(i => i.group === 'C').length,
+      freshCount: agingData.filter(i => i.ageBucket === '0-30 Days').length,
+      mediumCount: agingData.filter(i => i.ageBucket === '31-90 Days').length,
+      slowCount: agingData.filter(i => i.ageBucket === '91+ Days').length,
+    }
+  };
+}
+
+// ==========================================
+// 12. NOTIFICATIONS & ALERTS
+// ==========================================
+
+export async function getNotifications() {
+  return await prisma.notification.findMany({
+    orderBy: { createdAt: 'desc' },
+    take: 50
+  });
+}
+
+export async function markNotificationRead(id: string) {
+  return await prisma.notification.update({
+    where: { id },
+    data: { read: true }
+  });
+}
+
+export async function markAllNotificationsRead() {
+  return await prisma.notification.updateMany({
+    where: { read: false },
+    data: { read: true }
+  });
+}
+
+export async function createNotification(title: string, message: string, type: 'INFO' | 'WARNING' | 'SUCCESS' | 'ERROR' = 'INFO') {
+  return await prisma.notification.create({
+    data: { title, message, type }
+  });
+}
+
+// Helper to scan stock levels and raise low-stock notifications dynamically
+export async function runStockAlertsCheck() {
+  const items = await prisma.item.findMany({
+    select: { id: true, name: true, sku: true, quantityOnHand: true, minStock: true }
+  });
+
+  const lowStock = items.filter(item => item.quantityOnHand <= item.minStock && item.minStock > 0);
+
+  for (const item of lowStock) {
+    const existingNotification = await prisma.notification.findFirst({
+      where: {
+        title: `Low Stock: ${item.sku}`,
+        read: false
+      }
+    });
+
+    if (!existingNotification) {
+      await prisma.notification.create({
+        data: {
+          title: `Low Stock: ${item.sku}`,
+          message: `Item "${item.name}" has dropped to ${item.quantityOnHand} units on hand. Safety limit is ${item.minStock}.`,
+          type: 'WARNING'
+        }
+      });
+    }
+  }
+
+  return lowStock.length;
+}

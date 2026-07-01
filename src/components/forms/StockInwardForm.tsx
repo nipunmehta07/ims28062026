@@ -24,6 +24,7 @@ export default function StockInwardForm({
   const [reference, setReference] = useState("");
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [notes, setNotes] = useState("");
+  const [batchNumber, setBatchNumber] = useState("");
 
   // --- 2. Helper to Reset Form ---
   const resetForm = () => {
@@ -32,6 +33,7 @@ export default function StockInwardForm({
     setReference("");
     setDate(new Date().toISOString().split('T')[0]);
     setNotes("");
+    setBatchNumber("");
   };
 
   // --- 3. Sync State with initialData ---
@@ -44,6 +46,7 @@ export default function StockInwardForm({
       setReference(initialData.reason.split('Inward: ')[1]?.split(' (')[0] || "");
       setDate(new Date(initialData.createdAt).toISOString().split('T')[0]);
       setNotes(initialData.reason.includes('(') ? initialData.reason.split('(')[1].replace(')', '') : "");
+      setBatchNumber(initialData.batchNumber || "");
     } else {
       resetForm(); // Ensure clean state when adding new inward
     }
@@ -60,7 +63,8 @@ export default function StockInwardForm({
         quantity: parseInt(quantity), 
         reference, 
         date, 
-        notes 
+        notes,
+        batchNumber
       };
       
       if (initialData) {
@@ -108,13 +112,21 @@ export default function StockInwardForm({
         />
       </div>
 
-      <Input 
-        label="Reference (e.g. PO Number, Bill No)"
-        required 
-        value={reference} 
-        onChange={(e) => setReference(e.target.value)} 
-        placeholder="e.g. PO-9982" 
-      />
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <Input 
+          label="Reference (e.g. PO Number, Bill No)"
+          required 
+          value={reference} 
+          onChange={(e) => setReference(e.target.value)} 
+          placeholder="e.g. PO-9982" 
+        />
+        <Input 
+          label="Batch / Lot Number (Optional)"
+          value={batchNumber} 
+          onChange={(e) => setBatchNumber(e.target.value)} 
+          placeholder="e.g. BATCH-2026-X" 
+        />
+      </div>
 
       <Textarea 
         label="Notes"

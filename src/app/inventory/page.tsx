@@ -21,10 +21,12 @@ import {
   TrendingUp,
   TrendingDown,
   Minus,
-  Calendar
+  Calendar,
+  Check
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import InwardLedger from '@/components/InwardLedger';
+import toast from 'react-hot-toast';
 
 // Types
 interface Transaction {
@@ -125,6 +127,11 @@ export default function InventoryPage() {
     subCategory: '',
     status: '',
   });
+  const [metrics, setMetrics] = useState({
+    totalValue: 0,
+    lowStockCount: 0,
+    outOfStockCount: 0
+  });
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
@@ -148,6 +155,51 @@ export default function InventoryPage() {
   const [showTransactionModal, setShowTransactionModal] = useState(false);
   const [transactionItemId, setTransactionItemId] = useState<string | null>(null);
 
+  // State for inline adjustments
+  const [inlineAdjustItemId, setInlineAdjustItemId] = useState<string | null>(null);
+  const [inlineAdjustType, setInlineAdjustType] = useState<'addition' | 'deduction' | null>(null);
+  const [inlineAdjustQty, setInlineAdjustQty] = useState<number>(1);
+  const [inlineAdjustNote, setInlineAdjustNote] = useState('');
+  const [isInlineSubmitting, setIsInlineSubmitting] = useState(false);
+
+  const handleInlineAdjustSubmit = async (itemId: string) => {
+    if (inlineAdjustQty <= 0) {
+      toast.error("Quantity must be positive.");
+      return;
+    }
+    setIsInlineSubmitting(true);
+    const loadingToast = toast.loading("Updating stock level...");
+    try {
+      const response = await fetch(`/api/inventory`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: itemId,
+          updateType: inlineAdjustType,
+          quantityChange: inlineAdjustQty,
+          note: inlineAdjustNote || `Inline ${inlineAdjustType} of ${inlineAdjustQty} units`,
+        }),
+      });
+
+      if (response.ok) {
+        toast.success("Stock updated successfully!", { id: loadingToast });
+        setInlineAdjustItemId(null);
+        setInlineAdjustType(null);
+        setInlineAdjustQty(1);
+        setInlineAdjustNote('');
+        await fetchInventory();
+      } else {
+        const error = await response.json();
+        toast.error(error.error || 'Failed to update stock', { id: loadingToast });
+      }
+    } catch (error) {
+      console.error('Error updating stock inline:', error);
+      toast.error('Failed to update stock', { id: loadingToast });
+    } finally {
+      setIsInlineSubmitting(false);
+    }
+  };
+
   // Fetch inventory data
   const fetchInventory = useCallback(async () => {
     setLoading(true);
@@ -167,6 +219,9 @@ export default function InventoryPage() {
       if (response.ok) {
         setItems(data.data);
         setPagination(data.pagination);
+        if (data.metrics) {
+          setMetrics(data.metrics);
+        }
       } else {
         console.error('Failed to fetch inventory:', data.error);
       }
@@ -425,9 +480,9 @@ export default function InventoryPage() {
   };
 
   // Quick stats
-  const totalValue = items.reduce((sum, item) => sum + (item.unitCost * item.quantity), 0);
-  const lowStockCount = items.filter(item => item.status === 'Low Stock').length;
-  const outOfStockCount = items.filter(item => item.status === 'Out of Stock').length;
+  const totalValue = metrics.totalValue;
+  const lowStockCount = metrics.lowStockCount;
+  const outOfStockCount = metrics.outOfStockCount;
 
   return (
     <div className="space-y-6">
@@ -643,13 +698,13 @@ export default function InventoryPage() {
                   />
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-text-tertiary uppercase tracking-wider">Product Name</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-text-tertiary uppercase tracking-wider">SKU</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-text-tertiary uppercase tracking-wider">Category</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-text-tertiary uppercase tracking-wider">Sub-Category</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-text-tertiary uppercase tracking-wider">Unit</th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-text-tertiary uppercase tracking-wider">Unit Cost</th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-text-tertiary uppercase tracking-wider">Opening Stock</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-text-tertiary uppercase tracking-wider">Opening Date</th>
+                <th className="hidden md:table-cell px-4 py-3 text-left text-xs font-medium text-text-tertiary uppercase tracking-wider">SKU</th>
+                <th className="hidden sm:table-cell px-4 py-3 text-left text-xs font-medium text-text-tertiary uppercase tracking-wider">Category</th>
+                <th className="hidden lg:table-cell px-4 py-3 text-left text-xs font-medium text-text-tertiary uppercase tracking-wider">Sub-Category</th>
+                <th className="hidden sm:table-cell px-4 py-3 text-left text-xs font-medium text-text-tertiary uppercase tracking-wider">Unit</th>
+                <th className="hidden sm:table-cell px-4 py-3 text-right text-xs font-medium text-text-tertiary uppercase tracking-wider">Unit Cost</th>
+                <th className="px-4 py-3 text-right text-xs font-medium text-text-tertiary uppercase tracking-wider">Current Stock</th>
+                <th className="hidden lg:table-cell px-4 py-3 text-left text-xs font-medium text-text-tertiary uppercase tracking-wider">Opening Date</th>
                 <th className="px-4 py-3 text-right text-xs font-medium text-text-tertiary uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
@@ -700,22 +755,125 @@ export default function InventoryPage() {
                           </span>
                         </div>
                       </td>
-                      <td className="px-4 py-3 text-sm text-text-secondary font-mono">{item.sku}</td>
-                      <td className="px-4 py-3 text-sm text-text-secondary">{item.category}</td>
-                      <td className="px-4 py-3 text-sm text-text-secondary">{item.subCategory || '-'}</td>
-                      <td className="px-4 py-3 text-sm text-text-secondary">{item.unit}</td>
-                      <td className="px-4 py-3 text-sm text-text-secondary text-right">
+                      <td className="hidden md:table-cell px-4 py-3 text-sm text-text-secondary font-mono">{item.sku}</td>
+                      <td className="hidden sm:table-cell px-4 py-3 text-sm text-text-secondary">{item.category}</td>
+                      <td className="hidden lg:table-cell px-4 py-3 text-sm text-text-secondary">{item.subCategory || '-'}</td>
+                      <td className="hidden sm:table-cell px-4 py-3 text-sm text-text-secondary">{item.unit}</td>
+                      <td className="hidden sm:table-cell px-4 py-3 text-sm text-text-secondary text-right">
                         {formatCurrency(item.unitCost)}
                       </td>
-                      <td className="px-4 py-3 text-sm text-text-secondary text-right">
-                        <span className={cn(
-                          item.quantity === 0 ? 'text-error' : 
-                          item.quantity <= item.minStock ? 'text-warning' : 'text-success'
-                        )}>
-                          {item.openingStock}
-                        </span>
+                      <td className="px-4 py-3 text-sm text-text-secondary text-right relative group" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center justify-end gap-2">
+                          <span className={cn(
+                            'font-bold font-display text-sm',
+                            item.quantity === 0 ? 'text-error' : 
+                            item.quantity <= item.minStock ? 'text-warning' : 'text-success'
+                          )}>
+                            {item.quantity}
+                          </span>
+                          
+                          {/* Hover quick action buttons */}
+                          <div className="opacity-0 group-hover:opacity-100 flex items-center gap-1 transition-opacity">
+                            <button
+                              onClick={() => {
+                                setInlineAdjustItemId(item.id);
+                                setInlineAdjustType('addition');
+                                setInlineAdjustQty(1);
+                                setInlineAdjustNote('');
+                              }}
+                              className="p-1 bg-success/15 hover:bg-success/30 rounded text-success transition-all hover:scale-105 active:scale-95 cursor-pointer"
+                              title="Add stock inline"
+                            >
+                              <Plus className="w-3 h-3" />
+                            </button>
+                            <button
+                              onClick={() => {
+                                if (item.quantity <= 0) return;
+                                setInlineAdjustItemId(item.id);
+                                setInlineAdjustType('deduction');
+                                setInlineAdjustQty(1);
+                                setInlineAdjustNote('');
+                              }}
+                              className="p-1 bg-error/15 hover:bg-error/30 rounded text-error transition-all hover:scale-105 active:scale-95 cursor-pointer"
+                              title="Deduct stock inline"
+                            >
+                              <Minus className="w-3 h-3" />
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Inline adjustment Popover overlay */}
+                        {inlineAdjustItemId === item.id && (
+                          <div className="absolute right-0 top-full mt-1.5 z-30 w-56 p-3 bg-bg-secondary border border-border rounded-xl shadow-xl text-left animate-in fade-in slide-in-from-top-1 duration-200">
+                            <p className="text-[10px] font-bold text-text-secondary uppercase tracking-wider mb-2 font-display">
+                              Quick {inlineAdjustType === 'addition' ? 'Add' : 'Deduct'} ({item.unit})
+                            </p>
+                            
+                            <div className="space-y-2">
+                              {/* Quick Qty Preset Selectors */}
+                              <div className="flex gap-1">
+                                {[1, 5, 10, 50].map(val => (
+                                  <button
+                                    key={val}
+                                    type="button"
+                                    onClick={() => setInlineAdjustQty(val)}
+                                    className={cn(
+                                      "flex-1 py-1 text-[10px] font-bold rounded border transition-all cursor-pointer",
+                                      inlineAdjustQty === val
+                                        ? "bg-accent border-accent text-white"
+                                        : "bg-bg-tertiary border-border text-text-secondary hover:bg-bg-hover"
+                                    )}
+                                  >
+                                    {inlineAdjustType === 'addition' ? '+' : '-'}{val}
+                                  </button>
+                                ))}
+                              </div>
+
+                              {/* Manual Input */}
+                              <input
+                                type="number"
+                                min="1"
+                                value={inlineAdjustQty}
+                                onChange={(e) => setInlineAdjustQty(parseInt(e.target.value) || 0)}
+                                className="w-full px-2 py-1.5 bg-bg-tertiary border border-border rounded-lg text-xs outline-none focus:border-accent"
+                                placeholder="Qty"
+                              />
+
+                              {/* Note Input */}
+                              <input
+                                type="text"
+                                value={inlineAdjustNote}
+                                onChange={(e) => setInlineAdjustNote(e.target.value)}
+                                className="w-full px-2 py-1.5 bg-bg-tertiary border border-border rounded-lg text-xs outline-none focus:border-accent"
+                                placeholder="Adjustment note (optional)"
+                              />
+
+                              {/* Submit / Close controls */}
+                              <div className="flex gap-1.5 pt-1">
+                                <button
+                                  type="button"
+                                  onClick={() => handleInlineAdjustSubmit(item.id)}
+                                  disabled={isInlineSubmitting}
+                                  className="flex-1 py-1.5 bg-accent hover:bg-accent-hover text-white rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all disabled:opacity-50 cursor-pointer"
+                                >
+                                  {isInlineSubmitting ? 'Saving' : 'Apply'}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setInlineAdjustItemId(null);
+                                    setInlineAdjustType(null);
+                                  }}
+                                  className="px-2.5 py-1.5 bg-bg-secondary hover:bg-bg-hover border border-border rounded-lg text-[10px] font-bold text-text-secondary transition-all cursor-pointer"
+                                >
+                                  Close
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        )}
                       </td>
-                      <td className="px-4 py-3 text-sm text-text-secondary">
+                      <td className="hidden lg:table-cell px-4 py-3 text-sm text-text-secondary">
                         {formatDate(item.openingStockDate)}
                       </td>
                       <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>

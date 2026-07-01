@@ -27,8 +27,9 @@ model Item {
   // Relationships
   boms    Bom[]    @relation("MasterItem")
   bomsAsComponent BomComponent[]
-  transactions    InventoryTransaction[] // <-- ADD THIS LINE
+  transactions    InventoryTransaction[]
 
+  @@index([category])
   @@map("item")
   salesOrders    SalesOrderItem[]
 }
@@ -45,6 +46,7 @@ model Bom {
   components      BomComponent[]
   productionLogs  ProductionLog[]
 
+  @@index([itemId])
   @@map("bom")
 }
 
@@ -59,10 +61,12 @@ model BomComponent {
   componentItemId String
   componentItem   Item     @relation(fields: [componentItemId], references: [id])
 
+  @@index([bomId])
+  @@index([componentItemId])
   @@map("bom_component")
 }
 
-// 4. THE NEW STOCK LEDGER (History)
+// 4. THE STOCK LEDGER (History) — with audit user tracking
 model InventoryTransaction {
   id          String   @id @default(uuid())
   
@@ -75,21 +79,38 @@ model InventoryTransaction {
   newTotalQty Float    // A snapshot of what the total became after this transaction
   reason      String   // e.g., "Initial Stock", "BOM Production", "Manual Adjustment"
   
+  batchNumber String?  // C2: Batch & Serial Number Tracking
+
+  // Audit: Who performed this action
+  userId      String?
+  userName    String?
+  
   // Timestamp automatically records exactly when this happened
   createdAt   DateTime @default(now())
 
+  @@index([itemId])
+  @@index([createdAt])
   @@map("inventory_transaction")
 }
+
+// 5. Sales Orders
 model SalesOrder {
   id              String           @id @default(cuid())
   customerName    String
   orderDate       DateTime
   status          String           @default("PENDING") 
   totalAmount     Float            @default(0)
-  discountPercent Float            @default(0) // <--- ADD THIS LINE
+  discountPercent Float            @default(0)
   items           SalesOrderItem[]
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
+
+  // Link to Customer (optional for backward compatibility)
+  customerId      String?
+  customer        Customer?        @relation(fields: [customerId], references: [id])
+
+  @@index([customerId])
+  @@index([status])
 }
 
 model SalesOrderItem {
@@ -100,7 +121,48 @@ model SalesOrderItem {
   item      Item       @relation(fields: [itemId], references: [id])
   quantity  Int
   salePrice Float      @default(0)
+
+  @@index([orderId])
+  @@index([itemId])
 }
+
+// 6. Supplier Directory
+model Supplier {
+  id            String   @id @default(cuid())
+  name          String
+  contactPerson String?
+  phone         String?
+  email         String?
+  address       String?  @db.Text
+  materials     String?  @db.Text  // What materials/components they supply
+  leadTimeDays  Float    @default(0)
+  rating        String   @default("B")  // A+, A, B+, B
+  status        String   @default("Active")  // Active, Preferred, Inactive
+  notes         String?  @db.Text
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("supplier")
+}
+
+// 7. Customer Directory
+model Customer {
+  id            String   @id @default(cuid())
+  name          String
+  contactPerson String?
+  phone         String?
+  email         String?
+  address       String?  @db.Text
+  notes         String?  @db.Text
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  salesOrders   SalesOrder[]
+
+  @@map("customer")
+}
+
+// Auth models
 model Account {
   id                 String  @id @default(cuid())
   userId             String
@@ -135,8 +197,8 @@ model User {
   email         String?   @unique
   password      String?
   
-  // NEW ROLE FIELD 
-  role          String    @default("STAFF") // Use "ADMIN" or "STAFF"
+  // Role-based access
+  role          String    @default("STAFF") // "ADMIN", "MANAGER", "WAREHOUSE", "SALES", "VIEWER"
   
   accounts      Account[]
   sessions      Session[]
@@ -149,6 +211,8 @@ model VerificationToken {
 
   @@unique([identifier, token])
 }
+
+// 8. Production History Log — with audit user tracking
 model ProductionLog {
   id              String   @id @default(cuid())
   bomId           String
@@ -156,7 +220,24 @@ model ProductionLog {
   finishedItemId  String
   quantityBuilt   Int
   notes           String?
-  createdAt       DateTime @default(now()) // This will store your custom build date 
+  createdAt       DateTime @default(now())
+  
+  // Audit: Who performed this build
+  userId          String?
+  userName        String?
   
   bom             Bom      @relation(fields: [bomId], references: [id])
+}
+
+// 9. Notifications & Warnings
+model Notification {
+  id        String   @id @default(cuid())
+  title     String
+  message   String
+  type      String   @default("INFO") // "INFO", "WARNING", "SUCCESS", "ERROR"
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([read])
+  @@index([createdAt])
 }

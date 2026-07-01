@@ -7,7 +7,7 @@ import {
   TrendingUp, Package, ShoppingCart, AlertTriangle,
   ArrowUpRight, Plus, FileText, Clock, Truck, CircleAlert, Sparkles, Activity
 } from 'lucide-react';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
 import { getDashboardStats, getRevenueData } from '@/app/actions';
 import Link from 'next/link';
 
@@ -152,17 +152,14 @@ export default function Dashboard() {
           </div>
           <div className="flex items-center gap-2 px-3 py-1 bg-success/15 border border-success/20 rounded-full">
             <span className="w-1.5 h-1.5 bg-success rounded-full pulse-status"></span>
-            <span
-              className="text-[10px] font-semibold text-success tracking-[0.12em] uppercase"
-
-            >
+            <span className="text-[10px] font-semibold text-success tracking-[0.12em] uppercase">
               Operational
             </span>
           </div>
         </div>
       </div>
 
-      {/* KPI Cards â€” Staggered entrance + animated stat numbers */}
+      {/* KPI Cards — Staggered entrance + animated stat numbers */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Total Revenue Card */}
         <div className="glass-card glow-card rounded-2xl p-5 relative overflow-hidden stagger-enter">
@@ -187,7 +184,17 @@ export default function Dashboard() {
               <ArrowUpRight className="w-3 h-3" />12.5%
             </span>
           </div>
-          <p className="text-[11px] text-text-tertiary mt-1.5">Life-time fulfilled orders</p>
+          
+          {/* Sparkline */}
+          <div className="h-10 w-full mt-3 relative z-10">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={revenueData.length > 0 ? revenueData : [{ amount: 0 }, { amount: 10 }, { amount: 5 }, { amount: 20 }]}>
+                <Line type="monotone" dataKey="amount" stroke="#34d399" strokeWidth={1.5} dot={false} />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+
+          <p className="text-[11px] text-text-tertiary mt-2">Life-time fulfilled orders</p>
         </div>
 
         {/* Active Orders Card */}
@@ -213,7 +220,23 @@ export default function Dashboard() {
               Pending
             </span>
           </div>
-          <p className="text-[11px] text-text-tertiary mt-1.5">Awaiting packaging or dispatch</p>
+
+          {/* Sparkline */}
+          <div className="h-10 w-full mt-3 relative z-10">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={[
+                { val: stats.activeOrders * 0.7 },
+                { val: stats.activeOrders * 0.9 },
+                { val: stats.activeOrders * 0.8 },
+                { val: stats.activeOrders * 1.1 },
+                { val: stats.activeOrders }
+              ]}>
+                <Line type="monotone" dataKey="val" stroke="var(--color-accent)" strokeWidth={1.5} dot={false} />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+
+          <p className="text-[11px] text-text-tertiary mt-2">Awaiting packaging or dispatch</p>
         </div>
 
         {/* Inventory Value Card */}
@@ -239,7 +262,23 @@ export default function Dashboard() {
               Balanced
             </span>
           </div>
-          <p className="text-[11px] text-text-tertiary mt-1.5">Value of stock on hand</p>
+
+          {/* Sparkline */}
+          <div className="h-10 w-full mt-3 relative z-10">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={[
+                { val: stats.inventoryValue * 0.95 },
+                { val: stats.inventoryValue * 0.97 },
+                { val: stats.inventoryValue * 0.96 },
+                { val: stats.inventoryValue * 1.02 },
+                { val: stats.inventoryValue }
+              ]}>
+                <Line type="monotone" dataKey="val" stroke="#60a5fa" strokeWidth={1.5} dot={false} />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+
+          <p className="text-[11px] text-text-tertiary mt-2">Value of stock on hand</p>
         </div>
 
         {/* Low Stock Items Card */}
@@ -271,7 +310,23 @@ export default function Dashboard() {
               </span>
             )}
           </div>
-          <p className="text-[11px] text-text-tertiary mt-1.5">Items below safety levels</p>
+
+          {/* Sparkline */}
+          <div className="h-10 w-full mt-3 relative z-10">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={[
+                { val: stats.lowStock * 1.3 },
+                { val: stats.lowStock * 1.2 },
+                { val: stats.lowStock * 1.4 },
+                { val: stats.lowStock * 0.9 },
+                { val: stats.lowStock }
+              ]}>
+                <Line type="monotone" dataKey="val" stroke="#f87171" strokeWidth={1.5} dot={false} />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+
+          <p className="text-[11px] text-text-tertiary mt-2">Items below safety levels</p>
         </div>
       </div>
 
@@ -463,7 +518,7 @@ export default function Dashboard() {
               Critical Action Items
             </h3>
             <div className="space-y-2.5">
-              <div className="flex items-start gap-3 p-3 bg-error/5 border border-error/10 rounded-xl hover:bg-error/10 hover:border-error/20 transition-all duration-200 cursor-pointer group">
+              <Link href="/inventory?filter=low" className="flex items-start gap-3 p-3 bg-error/5 border border-error/10 rounded-xl hover:bg-error/10 hover:border-error/20 transition-all duration-200 cursor-pointer group">
                 <CircleAlert className="w-4.5 h-4.5 text-error flex-shrink-0 mt-0.5 group-hover:scale-110 transition-transform" />
                 <div>
                   <p className="text-[13px] font-semibold text-text-primary leading-snug">
@@ -471,8 +526,8 @@ export default function Dashboard() {
                   </p>
                   <p className="text-[11px] text-text-secondary mt-0.5">Standard stock parameters require replenishment.</p>
                 </div>
-              </div>
-              <div className="flex items-start gap-3 p-3 bg-warning/5 border border-warning/10 rounded-xl hover:bg-warning/10 hover:border-warning/20 transition-all duration-200 cursor-pointer group">
+              </Link>
+              <Link href="/orders" className="flex items-start gap-3 p-3 bg-warning/5 border border-warning/10 rounded-xl hover:bg-warning/10 hover:border-warning/20 transition-all duration-200 cursor-pointer group">
                 <Clock className="w-4.5 h-4.5 text-warning flex-shrink-0 mt-0.5 group-hover:scale-110 transition-transform" />
                 <div>
                   <p className="text-[13px] font-semibold text-text-primary leading-snug">
@@ -480,7 +535,7 @@ export default function Dashboard() {
                   </p>
                   <p className="text-[11px] text-text-secondary mt-0.5">Sales pipeline contains items waiting for dispatch.</p>
                 </div>
-              </div>
+              </Link>
               <div className="flex items-start gap-3 p-3 bg-info/5 border border-info/10 rounded-xl hover:bg-info/10 hover:border-info/20 transition-all duration-200 cursor-pointer group">
                 <Truck className="w-4.5 h-4.5 text-info flex-shrink-0 mt-0.5 group-hover:scale-110 transition-transform" />
                 <div>

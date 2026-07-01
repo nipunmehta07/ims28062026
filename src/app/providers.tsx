@@ -22,10 +22,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <SessionProvider>
       <QueryClientProvider client={queryClient}>
-        <ThemeProvider
-          defaultTheme="system"
-          storageKey="ims-theme"
-        >
+        <ThemeProvider>
           <ToastProvider position="top-right">
             {children}
           </ToastProvider>

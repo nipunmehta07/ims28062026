@@ -21,22 +21,22 @@ const commands = [
   { 
     category: 'Navigation', 
     items: [
-      { name: 'Go to Dashboard', shortcut: '⌘G D', icon: LayoutDashboard, href: '/' },
-      { name: 'Go to Inventory', shortcut: '⌘G I', icon: Package, href: '/inventory' },
-      { name: 'Go to Orders', shortcut: '⌘G O', icon: ShoppingCart, href: '/orders' },
-      { name: 'Go to Manufacturing', shortcut: '⌘G M', icon: Factory, href: '/manufacturing' },
-      { name: 'Go to BOM', shortcut: '⌘G B', icon: ClipboardList, href: '/bom' },
-      { name: 'Go to Customers', shortcut: '⌘G C', icon: Users, href: '/customers' },
-      { name: 'Go to Suppliers', shortcut: '⌘G S', icon: Truck, href: '/suppliers' },
-      { name: 'Go to Reports', shortcut: '⌘G R', icon: FileText, href: '/reports' },
+      { name: 'Go to Dashboard', shortcut: 'Ctrl+D', icon: LayoutDashboard, href: '/' },
+      { name: 'Go to Inventory', shortcut: 'Ctrl+I', icon: Package, href: '/inventory' },
+      { name: 'Go to Orders', shortcut: 'Ctrl+O', icon: ShoppingCart, href: '/orders' },
+      { name: 'Go to Manufacturing', shortcut: 'Ctrl+M', icon: Factory, href: '/manufacturing' },
+      { name: 'Go to BOM', shortcut: 'Ctrl+B', icon: ClipboardList, href: '/bom' },
+      { name: 'Go to Customers', shortcut: 'Ctrl+C', icon: Users, href: '/customers' },
+      { name: 'Go to Suppliers', shortcut: 'Ctrl+S', icon: Truck, href: '/suppliers' },
+      { name: 'Go to Reports', shortcut: 'Ctrl+R', icon: FileText, href: '/reports' },
     ]
   },
   { 
     category: 'Actions', 
     items: [
-      { name: 'Create New Order', shortcut: '⌘N O', icon: ShoppingCart, action: 'create-order' },
-      { name: 'Create New Product', shortcut: '⌘N P', icon: Package, action: 'create-product' },
-      { name: 'Open Settings', shortcut: '⌘S', icon: Settings, href: '/settings' },
+      { name: 'Create New Order', shortcut: 'Ctrl+Shift+O', icon: ShoppingCart, action: 'create-order' },
+      { name: 'Create New Product', shortcut: 'Ctrl+Shift+P', icon: Package, action: 'create-product' },
+      { name: 'Open Settings', shortcut: 'Ctrl+Shift+S', icon: Settings, href: '/settings' },
     ]
   },
 ];
@@ -120,7 +120,7 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
               autoFocus
             />
             <div className="flex items-center gap-1.5">
-              <kbd className="px-2 py-1 text-xs text-text-tertiary bg-bg-tertiary rounded-md border border-border font-mono">⌘</kbd>
+              <kbd className="px-2 py-1 text-xs text-text-tertiary bg-bg-tertiary rounded-md border border-border font-mono">Ctrl</kbd>
               <kbd className="px-2 py-1 text-xs text-text-tertiary bg-bg-tertiary rounded-md border border-border font-mono">K</kbd>
             </div>
           </div>

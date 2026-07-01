@@ -66,7 +66,7 @@ function mapPrismaItemToFrontend(item: any): InventoryItem {
 
   const status: 'In Stock' | 'Low Stock' | 'Out of Stock' = 
     item.quantityOnHand === 0 ? 'Out of Stock' :
-    item.quantityOnHand < 5 ? 'Low Stock' : 'In Stock';
+    item.quantityOnHand <= (item.minStock || 0) ? 'Low Stock' : 'In Stock';
 
   const history: Transaction[] = transactions.map((t: any) => {
     let type: 'addition' | 'deduction' | 'adjustment' = 'adjustment';
@@ -146,41 +146,83 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ data: mapPrismaItemToFrontend(item) });
     }
 
-    // Build database query filters
-    const where: any = {};
-    if (search) {
-      where.OR = [
-        { name: { contains: search, mode: 'insensitive' } },
-        { sku: { contains: search, mode: 'insensitive' } }
-      ];
-    }
-    if (category) {
-      where.category = category;
-    }
+    let items: any[] = [];
+    let total = 0;
 
-    // Status filter matching safety stock trigger < 5
-    if (status === 'Out of Stock') {
-      where.quantityOnHand = 0;
-    } else if (status === 'Low Stock') {
-      where.quantityOnHand = { gt: 0, lt: 5 };
-    } else if (status === 'In Stock') {
-      where.quantityOnHand = { gte: 5 };
-    }
+    if (status === 'Out of Stock' || status === 'Low Stock' || status === 'In Stock' || category || search) {
+      // Build conditions array for Raw SQL
+      const conditions: string[] = [];
+      
+      if (search) {
+        conditions.push(`("name" ILIKE '%${search}%' OR "sku" ILIKE '%${search}%')`);
+      }
+      if (category) {
+        conditions.push(`"category" = '${category}'`);
+      }
+      if (status === 'Out of Stock') {
+        conditions.push(`"quantityOnHand" = 0`);
+      } else if (status === 'Low Stock') {
+        conditions.push(`"quantityOnHand" > 0 AND "quantityOnHand" <= "minStock" AND "minStock" > 0`);
+      } else if (status === 'In Stock') {
+        conditions.push(`("quantityOnHand" > "minStock" OR "minStock" = 0) AND "quantityOnHand" > 0`);
+      }
 
-    const total = await prisma.item.count({ where });
-    const items = await prisma.item.findMany({
-      where,
-      include: {
-        transactions: {
-          orderBy: { createdAt: 'desc' }
-        }
-      },
-      orderBy: { name: 'asc' },
-      skip: (page - 1) * limit,
-      take: limit
-    });
+      const whereClause = conditions.length > 0 ? 'WHERE ' + conditions.join(' AND ') : '';
+
+      // Query total counts first
+      const countResult: any[] = await prisma.$queryRawUnsafe(`
+        SELECT COUNT(*)::int as count FROM "item" ${whereClause}
+      `);
+      total = countResult[0]?.count || 0;
+
+      // Query paginated data
+      items = await prisma.$queryRawUnsafe(`
+        SELECT * FROM "item"
+        ${whereClause}
+        ORDER BY "name" ASC
+        LIMIT ${limit} OFFSET ${(page - 1) * limit}
+      `);
+
+      // Populate relations (transactions)
+      const itemIds = items.map(i => i.id);
+      const allTransactions = itemIds.length > 0 
+        ? await prisma.inventoryTransaction.findMany({
+            where: { itemId: { in: itemIds } },
+            orderBy: { createdAt: 'desc' }
+          })
+        : [];
+
+      items = items.map(item => ({
+        ...item,
+        transactions: allTransactions.filter(t => t.itemId === item.id)
+      }));
+
+    } else {
+      // Standard query path (no complex relational status filters)
+      const where: any = {};
+      total = await prisma.item.count({ where });
+      items = await prisma.item.findMany({
+        where,
+        include: {
+          transactions: {
+            orderBy: { createdAt: 'desc' }
+          }
+        },
+        orderBy: { name: 'asc' },
+        skip: (page - 1) * limit,
+        take: limit
+      });
+    }
 
     const mappedItems = items.map(mapPrismaItemToFrontend);
+
+    // Compute unpaginated total metrics
+    const allDbItems = await prisma.item.findMany({
+      select: { quantityOnHand: true, unitCost: true, minStock: true }
+    });
+    const computedTotalValue = allDbItems.reduce((sum, item) => sum + (item.unitCost * item.quantityOnHand), 0);
+    const computedLowStock = allDbItems.filter(item => item.quantityOnHand > 0 && item.quantityOnHand <= item.minStock).length;
+    const computedOutOfStock = allDbItems.filter(item => item.quantityOnHand === 0).length;
 
     return NextResponse.json({
       data: mappedItems,
@@ -189,6 +231,11 @@ export async function GET(request: NextRequest) {
         limit,
         total,
         totalPages: Math.ceil(total / limit),
+      },
+      metrics: {
+        totalValue: computedTotalValue,
+        lowStockCount: computedLowStock,
+        outOfStockCount: computedOutOfStock
       },
       filters: { search, category, subCategory, status },
     });

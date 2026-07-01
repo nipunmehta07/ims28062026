@@ -18,6 +18,7 @@ import Papa from "papaparse";
 import SearchableSelect from "./ui/SearchableSelect";
 import Drawer from "./ui/Drawer";
 import toast from "react-hot-toast";
+import { cn } from "@/lib/utils";
 import { 
   ChevronDown, 
   ChevronUp, 
@@ -358,16 +359,82 @@ export default function BomView() {
                     </TableCell>
                   </TableRow>
                   {expandedRows.includes(bom.id) && (
-                    <TableRow className="bg-gray-50/50">
+                    <TableRow className="bg-bg-tertiary/20">
                       <TableCell colSpan={4} className="px-6 md:px-12 py-6 text-left">
-                        <div className="space-y-3 border-l-2 border-black/10 pl-4 md:pl-6">
-                          <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-2">Recipe Components</p>
-                          {bom.components.map((c: any) => (
-                            <div key={c.id} className="flex justify-between items-center max-w-md gap-4">
-                              <span className="text-[10px] font-bold text-gray-600 uppercase truncate">{c.componentItem.name}</span>
-                              <span className="text-[10px] font-black text-gray-400 shrink-0">{c.quantity} {c.componentItem.unit}</span>
+                        <div className="space-y-4">
+                          <p className="text-[9px] font-semibold text-text-secondary uppercase tracking-[0.14em] font-display mb-3">
+                            Hierarchical Recipe Tree
+                          </p>
+
+                          {/* Parent Node */}
+                          <div className="flex items-center gap-2.5 p-3 bg-bg-secondary border border-border rounded-xl w-full max-w-xl shadow-sm">
+                            <div className="p-1.5 bg-accent/15 rounded-lg text-accent">
+                              <Package className="w-4 h-4" />
                             </div>
-                          ))}
+                            <div>
+                              <span className="text-xs font-bold text-text-primary font-display">{bom.name}</span>
+                              <span className="text-[10px] text-text-tertiary font-mono block uppercase">{bom.item.sku || 'No SKU'} · Parent Assembly</span>
+                            </div>
+                          </div>
+
+                          {/* Child Branches */}
+                          <div className="space-y-1">
+                            {bom.components.map((c: any, idx: number) => {
+                              const isLast = idx === bom.components.length - 1;
+                              const live = inventory.find((inv: any) => inv.id === c.componentItemId);
+                              const available = live?.quantityOnHand || 0;
+                              const required = c.quantity;
+                              
+                              const isShortage = available < required;
+                              const isLow = available >= required && available < required * 2.5;
+                              
+                              return (
+                                <div key={c.id} className="flex items-start max-w-xl">
+                                  {/* Connector Line Character */}
+                                  <span className="font-mono text-text-tertiary text-sm select-none mr-2.5 mt-2.5">
+                                    {isLast ? "└──" : "├──"}
+                                  </span>
+                                  
+                                  {/* Ingredient Node */}
+                                  <div className={cn(
+                                    "flex-1 flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-xl border transition-all duration-200 mt-1.5",
+                                    isShortage 
+                                      ? "bg-error/5 border-error/20" 
+                                      : isLow 
+                                        ? "bg-warning/5 border-warning/20" 
+                                        : "bg-bg-secondary border-border/80"
+                                  )}>
+                                    <div className="space-y-0.5">
+                                      <span className="text-xs font-semibold text-text-primary block">{c.componentItem.name}</span>
+                                      <span className="text-[10px] text-text-tertiary font-mono block uppercase">
+                                        {c.componentItem.sku || 'No SKU'} · Req: {required.toFixed(3)} {c.componentItem.unit}
+                                      </span>
+                                    </div>
+                                    
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-xs font-medium text-text-secondary">
+                                        Stock: {available.toFixed(2)}
+                                      </span>
+                                      
+                                      {isShortage ? (
+                                        <span className="text-[9px] font-bold bg-error/10 text-error px-2 py-0.5 rounded-full border border-error/15 uppercase tracking-wide">
+                                          Shortage
+                                        </span>
+                                      ) : isLow ? (
+                                        <span className="text-[9px] font-bold bg-warning/10 text-warning px-2 py-0.5 rounded-full border border-warning/15 uppercase tracking-wide">
+                                          Low Stock
+                                        </span>
+                                      ) : (
+                                        <span className="text-[9px] font-bold bg-success/10 text-success px-2 py-0.5 rounded-full border border-success/15 uppercase tracking-wide">
+                                          Ready
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
                         </div>
                       </TableCell>
                     </TableRow>

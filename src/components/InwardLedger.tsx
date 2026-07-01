@@ -11,6 +11,7 @@ import { Card } from "./ui/Card";
 import { Button } from "./ui/Button";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell, TableFooter } from "./ui/Table";
 import { useSession } from "next-auth/react";
+import { cn } from "@/lib/utils";
 
 export default function InwardLedger() {
   const queryClient = useQueryClient(); // Helper to refresh memory
@@ -107,138 +108,165 @@ export default function InwardLedger() {
 
   // Only show loading on the very first visit
   if (isLoading && history.length === 0) {
-    return <div className="p-20 text-center animate-pulse text-[10px] font-black uppercase tracking-[0.3em] text-gray-400">Syncing Ledger...</div>;
+    return <div className="p-20 text-center animate-pulse text-xs font-bold uppercase tracking-widest text-text-tertiary">Syncing Ledger...</div>;
   }
 
   return (
-    <div className="flex flex-col gap-6 font-sans animate-in fade-in slide-in-from-bottom-4 duration-500 relative">
+    <div className="flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500 relative">
       
-      {/* 1. HEADER & KPI (Using 'history' from cache) */}
+      {/* 1. HEADER & KPI */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        <Card variant="default" padding="md" radius="lg" className="flex flex-col justify-center">
-          <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Inward Volume (This Month)</p>
-          <p className="text-3xl font-black text-gray-900 mt-1">
-            {totalInwardThisMonth.toLocaleString()} <span className="text-[10px] text-gray-300 uppercase">Units</span>
+        <div className="glass-card glow-card rounded-2xl p-5 relative overflow-hidden flex flex-col justify-center">
+          <div className="absolute inset-0 bg-gradient-to-br from-success/5 via-transparent to-transparent opacity-50" />
+          <p className="text-[10px] font-black text-text-secondary uppercase tracking-widest relative z-10">Inward Volume (This Month)</p>
+          <p className="text-3xl font-black text-text-primary mt-2 stat-number relative z-10">
+            {totalInwardThisMonth.toLocaleString()} <span className="text-xs text-text-secondary font-bold uppercase tracking-normal">Units</span>
           </p>
-        </Card>
+        </div>
         
-        <Card variant="default" padding="md" radius="lg" className="sm:col-span-2 lg:col-span-2 flex flex-col sm:flex-row items-center gap-4">
+        <div className="sm:col-span-2 lg:col-span-2 flex flex-col sm:flex-row items-center gap-4">
           <div className="relative flex-1 w-full">
             <input 
               type="text" 
               placeholder="Search Reference, SKU or Product..." 
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-4 pr-10 py-3 bg-gray-50 border border-transparent focus:border-gray-200 rounded-xl text-[12px] font-bold uppercase tracking-tight outline-none transition-all placeholder:text-gray-300"
+              className="w-full pl-4 pr-10 py-3 bg-bg-secondary border border-border rounded-xl text-xs font-bold outline-none transition-all placeholder:text-text-tertiary focus:border-accent text-text-primary"
             />
-            <div className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-300">🔍</div>
+            <div className="absolute right-4 top-1/2 -translate-y-1/2 text-text-tertiary">🔍</div>
           </div>
           <Button 
             variant="primary"
             size="md"
             onClick={() => { setEditingLog(null); setShowForm(true); }}
-            className="w-full sm:w-auto"
+            className="w-full sm:w-auto px-5 py-3 text-xs font-bold uppercase tracking-wider bg-accent hover:bg-accent-hover text-white rounded-xl shadow-lg shadow-accent/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
           >
             + Record Shipment
           </Button>
-        </Card>
+        </div>
       </div>
 
       {/* FLOATING BULK ACTIONS BAR */}
       {selectedIds.length > 0 && (
-        <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[100] bg-black text-white px-8 py-4 rounded-2xl shadow-2xl flex items-center gap-8 animate-in slide-in-from-bottom-10">
-          <p className="text-[10px] font-black uppercase tracking-[0.3em]">{selectedIds.length} Records Selected</p>
-          <div className="h-4 w-[1px] bg-gray-700"></div>
-          <div className="flex gap-6">
-            <Button variant="ghost" size="sm" onClick={handleBulkDelete} className="text-rose-500 hover:text-rose-400">Delete Selection</Button>
-            <Button variant="ghost" size="sm" onClick={() => setSelectedIds([])} className="text-gray-500">Cancel</Button>
+        <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[100] bg-bg-secondary border border-border text-text-primary px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-6 animate-in slide-in-from-bottom-10">
+          <p className="text-xs font-bold uppercase tracking-wider">{selectedIds.length} Records Selected</p>
+          <div className="h-5 w-[1px] bg-border"></div>
+          <div className="flex gap-4">
+            <button onClick={handleBulkDelete} className="text-xs font-bold text-error hover:underline uppercase tracking-wider">Delete Selection</button>
+            <button onClick={() => setSelectedIds([])} className="text-xs font-bold text-text-secondary hover:underline uppercase tracking-wider">Cancel</button>
           </div>
         </div>
       )}
 
       {/* 2. THE MASTER LEDGER TABLE */}
-      <Card variant="default" padding="none" radius="lg" className="border-t-4 border-t-black">
-        <Table minWidth="950px">
-          <TableHeader>
-            <TableRow hover={false} className="bg-gradient-to-r from-emerald-50/50 via-white to-teal-50/50 dark:from-emerald-950/30 dark:via-zinc-900 dark:to-teal-950/30">
-              <TableHead className="w-10">
-                {isAdmin && (
-                  <input 
-                    type="checkbox" 
-                    className="w-4 h-4 rounded border-gray-300 accent-black cursor-pointer"
-                    checked={selectedIds.length === filteredHistory.length && filteredHistory.length > 0}
-                    onChange={toggleSelectAll}
-                  />
-                )}
-              </TableHead>
-              <TableHead>Date Arrived</TableHead>
-              <TableHead>Reference</TableHead>
-              <TableHead>Product Specification</TableHead>
-              <TableHead align="right">Qty Added</TableHead>
-              <TableHead>Notes</TableHead>
-              <TableHead></TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredHistory.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={7} className="py-24 text-center text-gray-300 text-[11px] font-bold uppercase tracking-widest">No matching records found</TableCell>
-              </TableRow>
-            ) : (
-              filteredHistory.map((log: any) => {
-                const isSelected = selectedIds.includes(log.id);
-                return (
-                  <TableRow key={log.id} selected={isSelected}>
-                    <TableCell>
-                      {isAdmin && (
-                        <input 
-                          type="checkbox" 
-                          className="w-4 h-4 rounded border-gray-300 accent-black cursor-pointer"
-                          checked={isSelected}
-                          onChange={() => toggleSelectItem(log.id)}
-                        />
+      <div className="bg-bg-secondary border border-border rounded-2xl overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-border bg-bg-tertiary/50">
+                <th className="w-10 px-4 py-3">
+                  {isAdmin && (
+                    <input 
+                      type="checkbox" 
+                      className="rounded bg-bg-tertiary border-border cursor-pointer accent-accent"
+                      checked={selectedIds.length === filteredHistory.length && filteredHistory.length > 0}
+                      onChange={toggleSelectAll}
+                    />
+                  )}
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-text-tertiary uppercase tracking-wider">Date Arrived</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-text-tertiary uppercase tracking-wider">Reference</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-text-tertiary uppercase tracking-wider">Batch / Lot</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-text-tertiary uppercase tracking-wider">Product Specification</th>
+                <th className="px-4 py-3 text-right text-xs font-medium text-text-tertiary uppercase tracking-wider">Qty Added</th>
+                <th className="hidden md:table-cell px-4 py-3 text-left text-xs font-medium text-text-tertiary uppercase tracking-wider">Notes</th>
+                <th className="px-4 py-3 text-right text-xs font-medium text-text-tertiary uppercase tracking-wider">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredHistory.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="py-12 text-center text-text-secondary text-xs font-bold uppercase tracking-widest">
+                    No matching records found
+                  </td>
+                </tr>
+              ) : (
+                filteredHistory.map((log: any) => {
+                  const isSelected = selectedIds.includes(log.id);
+                  return (
+                    <tr 
+                      key={log.id} 
+                      className={cn(
+                        "border-b border-border/50 transition-colors group",
+                        isSelected ? "bg-accent/5" : "hover:bg-bg-hover"
                       )}
-                    </TableCell>
-                    <TableCell onClick={() => toggleSelectItem(log.id)}>
-                      {new Date(log.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
-                    </TableCell>
-                    <TableCell onClick={() => toggleSelectItem(log.id)}>
-                      <span className="text-[10px] font-black px-2 py-1 bg-gray-100 text-gray-500 rounded uppercase tracking-widest border border-gray-200">
-                        {log.reason.split('Inward: ')[1]?.split(' (')[0] || log.reason}
-                      </span>
-                    </TableCell>
-                    <TableCell onClick={() => toggleSelectItem(log.id)}>
-                      <div className="text-[13px] font-black text-gray-900 uppercase tracking-tight">{log.item.name}</div>
-                      <div className="text-[9px] font-mono font-bold text-gray-400 mt-0.5">{log.item.sku}</div>
-                    </TableCell>
-                    <TableCell align="right" onClick={() => toggleSelectItem(log.id)}>
-                      <div className="text-[15px] font-black text-emerald-600">+{log.changeQty}</div>
-                      <div className="text-[9px] font-bold text-gray-400 uppercase">Total: {log.newTotalQty} {log.item.unit}</div>
-                    </TableCell>
-                    <TableCell className="max-w-[200px]" onClick={() => toggleSelectItem(log.id)}>
-                      <p className="text-[11px] text-gray-400 italic truncate" title={log.reason.includes('(') ? log.reason.split('(')[1].replace(')', '') : ''}>
-                        {log.reason.includes('(') ? log.reason.split('(')[1].replace(')', '') : '—'}
-                      </p>
-                    </TableCell>
-                    <TableCell>
-                      {isAdmin && (
-                        <div className="flex items-center justify-end gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <Button variant="ghost" size="sm" onClick={() => { setEditingLog(log); setShowForm(true); }}>
-                            Edit
-                          </Button>
-                          <Button variant="ghost" size="sm" onClick={() => handleDelete(log.id)} className="text-rose-400 hover:text-rose-600">
-                            Delete
-                          </Button>
-                        </div>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                )
-              })
-            )}
-          </TableBody>
-        </Table>
-      </Card>
+                    >
+                      <td className="px-4 py-3">
+                        {isAdmin && (
+                          <input 
+                            type="checkbox" 
+                            className="rounded bg-bg-tertiary border-border cursor-pointer accent-accent"
+                            checked={isSelected}
+                            onChange={() => toggleSelectItem(log.id)}
+                          />
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-xs text-text-primary font-medium" onClick={() => toggleSelectItem(log.id)}>
+                        {new Date(log.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+                      </td>
+                      <td className="px-4 py-3" onClick={() => toggleSelectItem(log.id)}>
+                        <span className="inline-flex items-center text-[10px] font-bold px-2 py-0.5 bg-bg-tertiary border border-border text-text-secondary rounded uppercase tracking-wider">
+                          {log.reason.split('Inward: ')[1]?.split(' (')[0] || log.reason}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3" onClick={() => toggleSelectItem(log.id)}>
+                        {log.batchNumber ? (
+                          <span className="inline-flex items-center text-[9px] font-mono font-bold bg-accent/10 border border-accent/20 text-accent px-2 py-0.5 rounded">
+                            {log.batchNumber}
+                          </span>
+                        ) : (
+                          <span className="text-text-tertiary text-xs">—</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3" onClick={() => toggleSelectItem(log.id)}>
+                        <div className="text-xs font-bold text-text-primary">{log.item.name}</div>
+                        <div className="text-[10px] font-mono text-text-tertiary mt-0.5">{log.item.sku}</div>
+                      </td>
+                      <td className="px-4 py-3 text-right" onClick={() => toggleSelectItem(log.id)}>
+                        <div className="text-sm font-black text-success">+{log.changeQty}</div>
+                        <div className="text-[9px] font-bold text-text-tertiary uppercase">Total: {log.newTotalQty} {log.item.unit}</div>
+                      </td>
+                      <td className="hidden md:table-cell px-4 py-3 max-w-[200px]" onClick={() => toggleSelectItem(log.id)}>
+                        <p className="text-xs text-text-secondary italic truncate" title={log.reason.includes('(') ? log.reason.split('(')[1].replace(')', '') : ''}>
+                          {log.reason.includes('(') ? log.reason.split('(')[1].replace(')', '') : '—'}
+                        </p>
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        {isAdmin && (
+                          <div className="flex items-center justify-end gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button 
+                              onClick={() => { setEditingLog(log); setShowForm(true); }}
+                              className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-accent bg-accent/10 hover:bg-accent/20 rounded transition-colors"
+                            >
+                              Edit
+                            </button>
+                            <button 
+                              onClick={() => handleDelete(log.id)}
+                              className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-error bg-error/10 hover:bg-error/20 rounded transition-colors"
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  )
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
 
       {/* 3. RECORD / EDIT DRAWER */}
       <Drawer 
