@@ -2,11 +2,11 @@
 
 import { useState, useEffect } from "react";
 import { getInventory, stockInwardAction, updateInwardAction } from "@/app/actions";
-import SearchableSelect from "../ui/SearchableSelect";
+import SearchableSelect from "@/components/ui/SearchableSelect";
 import toast from "react-hot-toast";
-import { Input } from "../ui/Input";
-import { Textarea } from "../ui/Input";
-import { Button } from "../ui/Button";
+import { Input } from "@/components/ui/Input";
+import { Textarea } from "@/components/ui/Input";
+import { Button } from "@/components/ui/Button";
 
 export default function StockInwardForm({ 
   onCancel, 

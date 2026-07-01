@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { getInventory, createSalesOrderAction, updateSalesOrderAction } from "@/app/actions"; 
 import toast from "react-hot-toast";
-import { X } from "lucide-react"; //
+import { X } from "lucide-react";
 
 export default function SalesOrderForm({ onCancel, onSuccess, initialOrder }: any) {
   // --- 1. State Definitions ---
@@ -57,7 +57,7 @@ export default function SalesOrderForm({ onCancel, onSuccess, initialOrder }: an
     setItems(newItems);
   };
 
-  // NEW: Remove Item Handler
+  // Remove Item Handler
   const removeItem = (index: number) => {
     if (items.length <= 1) {
       toast.error("At least one item is required.");
@@ -116,32 +116,32 @@ export default function SalesOrderForm({ onCancel, onSuccess, initialOrder }: an
   };
 
   return (
-    <div className="flex flex-col h-full bg-white p-6 space-y-6 overflow-y-auto font-sans">
+    <div className="flex flex-col h-full bg-bg-secondary text-text-primary p-6 space-y-6 overflow-y-auto font-sans">
       
       <div className="grid grid-cols-2 gap-5 text-left">
         <div>
-          <label className="block text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Client Name</label>
+          <label className="block text-[10px] font-semibold text-text-secondary uppercase tracking-wider mb-1.5 font-display">Client Name</label>
           <input 
             type="text" 
             placeholder="Enter client name..." 
             value={customerName} 
             onChange={(e) => setCustomerName(e.target.value)} 
-            className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm font-medium text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-black focus:border-black transition-all" 
+            className="w-full px-3 py-2 bg-bg-tertiary border border-border rounded-lg text-sm font-medium text-text-primary placeholder-text-tertiary focus:outline-none focus:ring-1 focus:ring-accent focus:border-accent transition-all" 
           />
         </div>
         <div>
-          <label className="block text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Order Date</label>
+          <label className="block text-[10px] font-semibold text-text-secondary uppercase tracking-wider mb-1.5 font-display">Order Date</label>
           <input 
             type="date" 
             value={orderDate} 
             onChange={(e) => setOrderDate(e.target.value)} 
-            className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm font-medium text-gray-900 focus:outline-none focus:ring-1 focus:ring-black focus:border-black transition-all" 
+            className="w-full px-3 py-2 bg-bg-tertiary border border-border rounded-lg text-sm font-medium text-text-primary focus:outline-none focus:ring-1 focus:ring-accent focus:border-accent transition-all" 
           />
         </div>
       </div>
 
       <div className="space-y-3 text-left">
-        <label className="block text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Line Items</label>
+        <label className="block text-[10px] font-semibold text-text-secondary uppercase tracking-wider font-display">Line Items</label>
         
         {items.map((item, index) => {
           const displayValue = item.searchQuery !== undefined && item.searchQuery !== "" 
@@ -155,19 +155,19 @@ export default function SalesOrderForm({ onCancel, onSuccess, initialOrder }: an
           });
 
           return (
-            <div key={index} className="p-4 bg-white border border-gray-200 rounded-xl space-y-4 shadow-sm relative animate-in fade-in zoom-in-95">
+            <div key={index} className="p-4 bg-bg-tertiary border border-border rounded-xl space-y-4 shadow-sm relative animate-in fade-in zoom-in-95">
               
               {/* REMOVE BUTTON */}
               <button
                 type="button"
                 onClick={() => removeItem(index)}
-                className="absolute top-2 right-2 p-1.5 text-gray-300 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-all z-10"
+                className="absolute top-2 right-2 p-1.5 text-text-tertiary hover:text-error hover:bg-error/10 rounded-lg transition-all z-10"
               >
                 <X size={16} />
               </button>
 
               <div className="relative">
-                <label className="block text-[10px] font-medium text-gray-500 uppercase mb-1">Search SKU / Name</label>
+                <label className="block text-[10px] font-medium text-text-secondary uppercase mb-1">Search SKU / Name</label>
                 <input 
                   type="text"
                   placeholder="Type to search products..."
@@ -181,11 +181,11 @@ export default function SalesOrderForm({ onCancel, onSuccess, initialOrder }: an
                   }}
                   onFocus={() => setActiveDropdown(index)}
                   onBlur={() => setTimeout(() => setActiveDropdown(null), 150)} 
-                  className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-md text-sm font-medium text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-black focus:border-black transition-all"
+                  className="w-full px-3 py-2 bg-bg-secondary border border-border rounded-md text-sm font-medium text-text-primary placeholder-text-tertiary focus:outline-none focus:ring-1 focus:ring-accent focus:border-accent transition-all"
                 />
 
                 {activeDropdown === index && (
-                  <ul className="absolute z-50 w-full mt-2 bg-white border border-gray-100 rounded-xl shadow-2xl max-h-64 overflow-y-auto top-full left-0 ring-1 ring-black/5 animate-in fade-in slide-in-from-top-2">
+                  <ul className="absolute z-50 w-full mt-2 bg-bg-secondary border border-border rounded-xl shadow-2xl max-h-64 overflow-y-auto top-full left-0 ring-1 ring-black/5 animate-in fade-in slide-in-from-top-2">
                     {filteredInventory.map(p => {
                       const stockLevel = p.quantityOnHand || 0;
                       return (
@@ -195,16 +195,16 @@ export default function SalesOrderForm({ onCancel, onSuccess, initialOrder }: an
                             e.preventDefault();
                             handleProductSelect(index, p);
                           }}
-                          className="px-4 py-3 hover:bg-gray-50 cursor-pointer border-b border-gray-50 last:border-0 transition-colors group"
+                          className="px-4 py-3 hover:bg-bg-hover cursor-pointer border-b border-border last:border-0 transition-colors group"
                         >
                           <div className="flex justify-between items-start">
                             <div className="text-left">
-                              <div className="text-sm font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">{p.name}</div>
-                              <div className="text-[10px] font-bold text-gray-400 mt-0.5 uppercase tracking-widest">{p.sku}</div>
+                              <div className="text-sm font-semibold text-text-primary group-hover:text-accent transition-colors">{p.name}</div>
+                              <div className="text-[10px] font-bold text-text-tertiary mt-0.5 uppercase tracking-widest">{p.sku}</div>
                             </div>
                             <div className="flex flex-col items-end">
-                              <span className="text-xs font-bold text-gray-900">₹{p.unitCost?.toLocaleString('en-IN') || 0}</span>
-                              <span className={`text-[9px] font-bold px-2 py-0.5 rounded uppercase tracking-widest mt-1 ${stockLevel > 10 ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-rose-50 text-rose-600 border border-rose-100'}`}>
+                              <span className="text-xs font-bold text-text-primary">₹{p.unitCost?.toLocaleString('en-IN') || 0}</span>
+                              <span className={`text-[9px] font-bold px-2 py-0.5 rounded uppercase tracking-widest mt-1 ${stockLevel > 10 ? 'bg-success/15 text-success border border-success/20' : 'bg-error/15 text-error border border-error/20'}`}>
                                 {stockLevel} Stock
                               </span>
                             </div>
@@ -218,23 +218,23 @@ export default function SalesOrderForm({ onCancel, onSuccess, initialOrder }: an
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="text-left">
-                  <label className="block text-[10px] font-medium text-gray-500 uppercase mb-1">Qty</label>
+                  <label className="block text-[10px] font-medium text-text-secondary uppercase mb-1">Qty</label>
                   <input 
                     type="number" 
                     placeholder="0" 
                     value={item.qty || ""} 
                     onChange={(e) => updateItem(index, 'qty', e.target.value)} 
-                    className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-md text-sm font-medium text-gray-900 focus:outline-none focus:ring-1 focus:ring-black focus:border-black transition-all" 
+                    className="w-full px-3 py-2 bg-bg-secondary border border-border rounded-md text-sm font-medium text-text-primary focus:outline-none focus:ring-1 focus:ring-accent focus:border-accent transition-all" 
                   />
                 </div>
                 <div className="text-left">
-                  <label className="block text-[10px] font-medium text-gray-500 uppercase mb-1">Price (₹)</label>
+                  <label className="block text-[10px] font-medium text-text-secondary uppercase mb-1">Price (₹)</label>
                   <input 
                     type="number" 
                     placeholder="0" 
                     value={item.unitPrice || ""} 
                     onChange={(e) => updateItem(index, 'unitPrice', e.target.value)} 
-                    className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-md text-sm font-medium text-gray-900 focus:outline-none focus:ring-1 focus:ring-black focus:border-black transition-all" 
+                    className="w-full px-3 py-2 bg-bg-secondary border border-border rounded-md text-sm font-medium text-text-primary focus:outline-none focus:ring-1 focus:ring-accent focus:border-accent transition-all" 
                   />
                 </div>
               </div>
@@ -244,29 +244,29 @@ export default function SalesOrderForm({ onCancel, onSuccess, initialOrder }: an
         
         <button 
           onClick={() => setItems([...items, { productId: '', qty: 0, unitPrice: 0, searchQuery: "" }])} 
-          className="text-xs font-semibold text-blue-600 hover:text-blue-800 transition-colors mt-2 inline-flex items-center gap-1"
+          className="text-xs font-semibold text-accent hover:text-accent-hover transition-colors mt-2 inline-flex items-center gap-1 cursor-pointer"
         >
           <span>+</span> Add Another Item
         </button>
       </div>
 
-      <div className="mt-auto pt-6 border-t border-gray-200 space-y-5">
-        <div className="flex justify-between items-center bg-gray-50 px-4 py-3 rounded-lg border border-gray-200">
-          <span className="text-xs font-semibold text-gray-600">Discount Applied</span>
+      <div className="mt-auto pt-6 border-t border-border space-y-5">
+        <div className="flex justify-between items-center bg-bg-tertiary px-4 py-3 rounded-lg border border-border">
+          <span className="text-xs font-semibold text-text-secondary">Discount Applied</span>
           <div className="flex items-center gap-1">
             <input 
               type="number" 
               value={discountPercent || ""} 
               onChange={(e) => setDiscountPercent(Number(e.target.value))} 
-              className="w-14 text-right bg-white border border-gray-200 rounded text-sm font-medium focus:outline-none focus:ring-1 focus:ring-black focus:border-black px-2 py-1" 
+              className="w-14 text-right bg-bg-secondary border border-border rounded text-sm font-medium focus:outline-none focus:ring-1 focus:ring-accent focus:border-accent px-2 py-1" 
             />
-            <span className="font-semibold text-gray-500 text-sm">%</span>
+            <span className="font-semibold text-text-secondary text-sm">%</span>
           </div>
         </div>
 
         <div className="flex justify-between items-end px-1">
-          <span className="text-sm font-semibold text-gray-500 uppercase tracking-wider">Invoice Amt </span>
-          <span className="text-2xl font-bold tracking-tight text-gray-900">
+          <span className="text-sm font-semibold text-text-secondary uppercase tracking-wider">Invoice Amt </span>
+          <span className="text-2xl font-bold tracking-tight text-text-primary">
             ₹{finalAmount.toLocaleString('en-IN')}
           </span>
         </div>
@@ -274,14 +274,14 @@ export default function SalesOrderForm({ onCancel, onSuccess, initialOrder }: an
         <div className="flex gap-3">
           <button 
             onClick={handleSubmit} 
-            className="flex-1 py-3 px-4 bg-black text-white rounded-lg text-sm font-semibold hover:bg-zinc-800 active:scale-[0.98] transition-all shadow-sm"
+            className="flex-1 py-3 px-4 bg-accent text-white rounded-lg text-sm font-semibold hover:bg-accent-hover active:scale-[0.98] transition-all shadow-sm cursor-pointer"
           >
             {initialOrder ? "Update Order" : "Save Order"}
           </button>
           <button 
             type="button" 
             onClick={onCancel}
-            className="px-6 py-3 border border-gray-200 rounded-lg text-sm font-semibold text-gray-500 hover:bg-gray-50 transition-all"
+            className="px-6 py-3 border border-border rounded-lg text-sm font-semibold text-text-secondary hover:bg-bg-hover transition-all cursor-pointer"
           >
             Cancel
           </button>

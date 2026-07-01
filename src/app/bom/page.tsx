@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
 
 export default function BomsPage() {
-  redirect('/manufacturing');
+  redirect('/manufacturing?tab=bom');
 }

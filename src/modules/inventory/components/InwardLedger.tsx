@@ -1,44 +1,37 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
-// 1. Import TanStack Query hooks
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getInwardHistory, deleteInwardAction } from "@/app/actions";
 import StockInwardForm from "./forms/StockInwardForm";
-import Drawer from "./ui/Drawer";
+import Drawer from "@/components/ui/Drawer";
 import toast from "react-hot-toast";
-import { Card } from "./ui/Card";
-import { Button } from "./ui/Button";
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell, TableFooter } from "./ui/Table";
+import { Card } from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell, TableFooter } from "@/components/ui/Table";
 import { useSession } from "next-auth/react";
 import { cn } from "@/lib/utils";
 
 export default function InwardLedger() {
-  const queryClient = useQueryClient(); // Helper to refresh memory
+  const queryClient = useQueryClient();
   const { data: session } = useSession();
   const isAdmin = session?.user?.role === "ADMIN";
 
-  // 2. DATA FETCHING: Replaces useEffect & useState
   const { data: history = [], isLoading } = useQuery({
-    queryKey: ["inwardHistory"], // Unique key for Ledger memory
+    queryKey: ["inwardHistory"],
     queryFn: () => getInwardHistory(),
   });
 
-  // 3. REFRESH LOGIC: Uses the queryClient
   const refreshData = () => {
     queryClient.invalidateQueries({ queryKey: ["inwardHistory"] });
     queryClient.invalidateQueries({ queryKey: ["inventory"] });
   };
   
-  // --- MULTI-SELECT STATE ---
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  
-  // UI States
   const [searchTerm, setSearchTerm] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [editingLog, setEditingLog] = useState<any>(null);
 
-  // --- FILTERING & STATS ---
   const filteredHistory = useMemo(() => {
     return history.filter((log: any) => {
       const search = searchTerm.toLowerCase();
@@ -52,7 +45,6 @@ export default function InwardLedger() {
     });
   }, [history, searchTerm]);
 
-  // --- SELECTION HANDLERS ---
   const toggleSelectAll = () => {
     if (selectedIds.length === filteredHistory.length && filteredHistory.length > 0) {
       setSelectedIds([]);
@@ -67,7 +59,6 @@ export default function InwardLedger() {
     );
   };
 
-  // --- BULK DELETE HANDLER ---
   const handleBulkDelete = async () => {
     if (!confirm(`Are you sure you want to delete ${selectedIds.length} records? This will revert stock for all of them.`)) return;
     
@@ -76,7 +67,7 @@ export default function InwardLedger() {
       await Promise.all(selectedIds.map(id => deleteInwardAction(id)));
       toast.success("Bulk deletion successful", { id: t });
       setSelectedIds([]);
-      refreshData(); // Trigger memory update
+      refreshData();
     } catch (error: any) {
       toast.error("Failed to complete bulk deletion", { id: t });
       refreshData();
@@ -90,7 +81,7 @@ export default function InwardLedger() {
     try {
       await deleteInwardAction(transactionId);
       toast.success("Record deleted and stock reverted.", { id: t });
-      refreshData(); // Trigger memory update
+      refreshData();
     } catch (error: any) {
       toast.error(error.message || "Failed to delete record.", { id: t });
     }
@@ -106,7 +97,6 @@ export default function InwardLedger() {
       .reduce((sum: number, log: any) => sum + log.changeQty, 0);
   }, [history]);
 
-  // Only show loading on the very first visit
   if (isLoading && history.length === 0) {
     return <div className="p-20 text-center animate-pulse text-xs font-bold uppercase tracking-widest text-text-tertiary">Syncing Ledger...</div>;
   }
@@ -278,7 +268,7 @@ export default function InwardLedger() {
           initialData={editingLog}
           onCancel={() => { setShowForm(false); setEditingLog(null); }} 
           onSuccess={() => {
-            refreshData(); // Clear memory after edit
+            refreshData();
             setShowForm(false);
             setEditingLog(null);
           }} 

@@ -2,14 +2,15 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { usePathname } from 'next/navigation';
 import { Topbar } from './Topbar';
 import { CommandPalette } from './CommandPalette';
-
 import { isPrimaryModifierPressed } from '@/lib/platform';
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+  const pathname = usePathname();
 
   // Global keyboard shortcuts (Ctrl+K palette, Ctrl+D Dashboard, Ctrl+I Inventory, etc.)
   useEffect(() => {
@@ -27,7 +28,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         setCommandPaletteOpen(prev => !prev);
       } else if (isMod && e.key.toLowerCase() === 'd') {
         e.preventDefault();
-        window.location.href = '/';
+        window.location.href = '/dashboard';
       } else if (isMod && e.key.toLowerCase() === 'i') {
         e.preventDefault();
         window.location.href = '/inventory';
@@ -76,6 +77,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <p className="text-[9px] text-text-tertiary uppercase tracking-widest font-mono">Zoie Bathware v1.0</p>
           </div>
         </div>
+      </div>
+    );
+  }
+
+  // Minimal shell for authentication pages and the root Module Selector page
+  const isMinimalShell = pathname === '/login' || pathname === '/register' || pathname === '/forgot-password' || pathname === '/';
+
+  if (isMinimalShell) {
+    return (
+      <div className="min-h-screen text-text-primary">
+        {children}
       </div>
     );
   }

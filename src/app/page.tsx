@@ -1,600 +1,178 @@
 // src/app/page.tsx
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
-import {
-  TrendingUp, Package, ShoppingCart, AlertTriangle,
-  ArrowUpRight, Plus, FileText, Clock, Truck, CircleAlert, Sparkles, Activity
-} from 'lucide-react';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
-import { getDashboardStats, getRevenueData } from '@/app/actions';
-import Link from 'next/link';
+import { useSession, signOut } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { 
+  LayoutDashboard, Package, Factory, Users, Settings, Sparkles, MessageCircle, Compass, 
+  LogOut, HelpCircle, ShoppingCart, Truck, FileText
+} from "lucide-react";
+import { useState } from "react";
+import toast from "react-hot-toast";
+import { cn } from "@/lib/utils";
 
-export default function Dashboard() {
-  const { data: session } = useSession();
-  const [greeting, setGreeting] = useState("Welcome back");
-  const [stats, setStats] = useState({
-    activeOrders: 0,
-    totalRevenue: 0,
-    inventoryValue: 0,
-    lowStock: 0,
-  });
-  const [revenueData, setRevenueData] = useState<any[]>([]);
-  const [chartDays, setChartDays] = useState<number>(7);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isChartLoading, setIsChartLoading] = useState(false);
+// App definitions using the real application modules
+const modules = [
+  { name: "Dashboard", path: "/dashboard", icon: LayoutDashboard, iconBg: "bg-blue-50 dark:bg-blue-950/20", iconColor: "text-blue-500" },
+  { name: "Inventory", path: "/inventory", icon: Package, iconBg: "bg-amber-50 dark:bg-amber-950/20", iconColor: "text-amber-500" },
+  { name: "Orders", path: "/orders", icon: ShoppingCart, iconBg: "bg-emerald-50 dark:bg-emerald-950/20", iconColor: "text-emerald-500" },
+  { name: "Manufacturing", path: "/manufacturing", icon: Factory, iconBg: "bg-cyan-50 dark:bg-cyan-950/20", iconColor: "text-cyan-500" },
+  { name: "Customers", path: "/customers", icon: Users, iconBg: "bg-purple-50 dark:bg-purple-950/20", iconColor: "text-purple-500" },
+  { name: "Suppliers", path: "/suppliers", icon: Truck, iconBg: "bg-rose-50 dark:bg-rose-950/20", iconColor: "text-rose-500" },
+  { name: "Reports", path: "/reports", icon: FileText, iconBg: "bg-violet-50 dark:bg-violet-950/20", iconColor: "text-violet-500", adminOnly: true },
+  { name: "Settings", path: "/settings", icon: Settings, iconBg: "bg-gray-50 dark:bg-gray-900/20", iconColor: "text-gray-500", adminOnly: true },
+];
 
-  // Time-of-day greeting logic
-  useEffect(() => {
-    const hr = new Date().getHours();
-    if (hr < 12) setGreeting("Good morning");
-    else if (hr < 17) setGreeting("Good afternoon");
-    else setGreeting("Good evening");
-  }, []);
+export default function ModuleSelectorPage() {
+  const { data: session, status } = useSession();
+  const router = useRouter();
+  const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
 
-  // Initial load — stats + chart
-  useEffect(() => {
-    async function loadInitial() {
-      setIsLoading(true);
-      try {
-        const [statsData, chartResult] = await Promise.all([
-          getDashboardStats(),
-          getRevenueData(chartDays)
-        ]);
-        setStats(statsData);
-        applyChartData(chartResult, chartDays);
-      } catch (err) {
-        console.error("Error loading dashboard metrics:", err);
-      } finally {
-        setIsLoading(false);
-      }
-    }
-    loadInitial();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // Chart-only reload when days toggle changes (skip initial)
-  const [initialLoad, setInitialLoad] = useState(true);
-  useEffect(() => {
-    if (initialLoad) { setInitialLoad(false); return; }
-    async function loadChart() {
-      setIsChartLoading(true);
-      try {
-        const chartResult = await getRevenueData(chartDays);
-        applyChartData(chartResult, chartDays);
-      } catch (err) {
-        console.error("Error loading chart data:", err);
-      } finally {
-        setIsChartLoading(false);
-      }
-    }
-    loadChart();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [chartDays]);
-
-  function applyChartData(chartResult: any[] | null, days: number) {
-    if (!chartResult || chartResult.length === 0) {
-      const fallback = Array.from({ length: days }).map((_, i) => {
-        const d = new Date();
-        d.setDate(d.getDate() - (days - 1 - i));
-        return {
-          date: d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }),
-          amount: 0
-        };
-      });
-      setRevenueData(fallback);
-    } else {
-      setRevenueData(chartResult);
-    }
+  // Redirect to login if not authenticated
+  if (status === "unauthenticated") {
+    router.push("/login");
+    return null;
   }
 
-  const displayName = session?.user?.name || session?.user?.username || "Staff User";
-
-  // â”€â”€ Skeleton Loading State â”€â”€
-  if (isLoading) {
+  if (status === "loading") {
     return (
-      <div className="space-y-6 max-w-6xl animate-in fade-in duration-300">
-        {/* Header skeleton */}
-        <div className="glass-card rounded-2xl p-6">
-          <div className="skeleton h-6 w-64 mb-2" />
-          <div className="skeleton h-4 w-96" />
-        </div>
-
-        {/* KPI cards skeleton */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {[1, 2, 3, 4].map(i => (
-            <div key={i} className="glass-card rounded-2xl p-5 stagger-enter" style={{ animationDelay: `${i * 60}ms` }}>
-              <div className="flex justify-between mb-4">
-                <div className="skeleton h-3 w-24" />
-                <div className="skeleton h-7 w-7 rounded-lg" />
-              </div>
-              <div className="skeleton h-7 w-32 mb-2" />
-              <div className="skeleton h-3 w-20" />
-            </div>
-          ))}
-        </div>
-
-        {/* Chart skeleton */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          <div className="lg:col-span-2 glass-card rounded-2xl p-5">
-            <div className="skeleton h-4 w-32 mb-2" />
-            <div className="skeleton h-56 w-full rounded-xl" />
-          </div>
-          <div className="glass-card rounded-2xl p-5">
-            <div className="skeleton h-4 w-40 mb-4" />
-            <div className="space-y-3">
-              {[1, 2, 3].map(i => <div key={i} className="skeleton h-12 w-full rounded-xl" />)}
-            </div>
-          </div>
-        </div>
+      <div className="min-h-screen w-full flex items-center justify-center bg-gradient-to-br from-[#eae8fc] via-[#e2dff5] to-[#decde8]">
+        <div className="w-8 h-8 border-4 border-[#714b67] border-t-transparent rounded-full animate-spin"></div>
       </div>
     );
   }
 
+  const user = session?.user;
+  const username = user?.name || user?.username || "Staff User";
+  const userRole = user?.role || "STAFF";
+  const initials = username.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2) || "US";
+  const isAdmin = userRole === "ADMIN";
+
+  const handleModuleClick = (name: string, comingSoon?: boolean) => {
+    if (comingSoon) {
+      toast.success(`${name} module mock is coming soon!`, {
+        icon: '🚀',
+        style: {
+          borderRadius: '12px',
+          background: '#6a4a63',
+          color: '#fff',
+        }
+      });
+    }
+  };
+
+  // Filter modules based on admin privileges
+  const filteredModules = modules.filter(m => !m.adminOnly || isAdmin);
+
   return (
-    <div className="space-y-6 max-w-6xl animate-in fade-in duration-500">
-      {/* Welcome Header */}
-      <div className="glass-card bg-mesh-gradient rounded-2xl p-6 relative overflow-hidden transition-all duration-300">
-        <div className="flex items-start justify-between">
-          <div className="space-y-1">
-            <div className="flex items-center gap-2.5">
-              <span
-                className="text-[22px] font-bold text-text-primary tracking-[-0.02em] leading-tight font-display"
-              >
-                {greeting}, {displayName}!
-              </span>
-              <Sparkles className="w-4 h-4 text-accent animate-pulse" />
-            </div>
-            <p className="text-[13px] text-text-secondary leading-relaxed">
-              Here's a live overview of Zoie India's metrics for today.
-            </p>
-          </div>
-          <div className="flex items-center gap-2 px-3 py-1 bg-success/15 border border-success/20 rounded-full">
-            <span className="w-1.5 h-1.5 bg-success rounded-full pulse-status"></span>
-            <span className="text-[10px] font-semibold text-success tracking-[0.12em] uppercase">
-              Operational
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* KPI Cards — Staggered entrance + animated stat numbers */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Total Revenue Card */}
-        <div className="glass-card glow-card rounded-2xl p-5 relative overflow-hidden stagger-enter">
-          <div className="absolute inset-0 bg-gradient-to-br from-success/5 via-transparent to-transparent opacity-50" />
-          <div className="flex items-center justify-between relative z-10">
-            <span
-              className="text-[10px] font-semibold text-text-secondary uppercase tracking-[0.14em] font-display"
-            >
-              Total Revenue
-            </span>
-            <div className="w-7 h-7 bg-success/10 rounded-lg flex items-center justify-center">
-              <TrendingUp className="w-4 h-4 text-success" />
-            </div>
-          </div>
-          <div className="mt-4 flex items-end justify-between relative z-10">
-            <span
-              className="text-[26px] font-bold text-text-primary leading-none tracking-[-0.02em] stat-number font-display"
-            >
-              ₹{stats.totalRevenue.toLocaleString('en-IN')}
-            </span>
-            <span className="text-xs text-success flex items-center gap-0.5 bg-success/10 px-2 py-0.5 rounded-full font-medium">
-              <ArrowUpRight className="w-3 h-3" />12.5%
-            </span>
-          </div>
+    <div className="min-h-screen w-full bg-gradient-to-br from-[#eae8fc] via-[#e2dff5] to-[#decde8] flex flex-col font-sans select-none overflow-x-hidden">
+      
+      {/* MODULE SCREEN HEADER */}
+      <header className="w-full h-14 flex items-center justify-end px-6 bg-transparent shrink-0">
+        <div className="flex items-center gap-5 text-gray-700 font-medium">
           
-          {/* Sparkline */}
-          <div className="h-10 w-full mt-3 relative z-10">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={revenueData.length > 0 ? revenueData : [{ amount: 0 }, { amount: 10 }, { amount: 5 }, { amount: 20 }]}>
-                <Line type="monotone" dataKey="amount" stroke="#34d399" strokeWidth={1.5} dot={false} />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
+          {/* AI Sparkle Icon */}
+          <button 
+            onClick={() => handleModuleClick("Zoie AI Assistant", true)}
+            className="p-1.5 hover:bg-white/30 rounded-lg transition-colors text-purple-600 hover:scale-105 active:scale-95"
+            title="Zoie AI"
+          >
+            <Sparkles className="w-4.5 h-4.5" />
+          </button>
 
-          <p className="text-[11px] text-text-tertiary mt-2">Life-time fulfilled orders</p>
-        </div>
-
-        {/* Active Orders Card */}
-        <div className="glass-card glow-card rounded-2xl p-5 relative overflow-hidden stagger-enter">
-          <div className="absolute inset-0 bg-gradient-to-br from-accent/5 via-transparent to-transparent opacity-50" />
-          <div className="flex items-center justify-between relative z-10">
-            <span
-              className="text-[10px] font-semibold text-text-secondary uppercase tracking-[0.14em] font-display"
+          {/* Chat / Discuss Icon with Badge */}
+          <div className="relative">
+            <button 
+              onClick={() => handleModuleClick("Discuss", true)}
+              className="p-1.5 hover:bg-white/30 rounded-lg transition-colors hover:scale-105 active:scale-95 text-gray-700"
             >
-              Active Orders
+              <MessageCircle className="w-4.5 h-4.5" />
+            </button>
+            <span className="absolute -top-1.5 -right-1.5 bg-[#a2436f] text-white text-[8px] font-black w-4.5 h-4.5 rounded-full flex items-center justify-center shadow-sm">
+              3
             </span>
-            <div className="w-7 h-7 bg-accent/10 rounded-lg flex items-center justify-center">
-              <ShoppingCart className="w-4 h-4 text-accent" />
-            </div>
           </div>
-          <div className="mt-4 flex items-end justify-between relative z-10">
-            <span
-              className="text-[26px] font-bold text-text-primary leading-none tracking-[-0.02em] stat-number font-display"
+
+          {/* Compass Icon */}
+          <button 
+            onClick={() => handleModuleClick("App Market", true)}
+            className="p-1.5 hover:bg-white/30 rounded-lg transition-colors hover:scale-105 active:scale-95 text-gray-700"
+            title="Discover Apps"
+          >
+            <Compass className="w-4.5 h-4.5" />
+          </button>
+
+          {/* Org Name */}
+          <span className="text-xs font-bold text-[#6a4a63] bg-white/40 px-3 py-1 rounded-full border border-white/20 select-none">
+            Zoie INC.
+          </span>
+
+          {/* User Initial Avatar Dropdown */}
+          <div className="relative">
+            <button
+              onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
+              className="w-8 h-8 rounded-xl bg-[#6a4a63] text-white flex items-center justify-center text-xs font-bold shadow-md hover:scale-105 active:scale-95 transition-all border border-white/20"
             >
-              {stats.activeOrders}
-            </span>
-            <span className="text-xs text-accent flex items-center gap-0.5 bg-accent/10 px-2 py-0.5 rounded-full font-medium">
-              Pending
-            </span>
-          </div>
+              {initials}
+            </button>
 
-          {/* Sparkline */}
-          <div className="h-10 w-full mt-3 relative z-10">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={[
-                { val: stats.activeOrders * 0.7 },
-                { val: stats.activeOrders * 0.9 },
-                { val: stats.activeOrders * 0.8 },
-                { val: stats.activeOrders * 1.1 },
-                { val: stats.activeOrders }
-              ]}>
-                <Line type="monotone" dataKey="val" stroke="var(--color-accent)" strokeWidth={1.5} dot={false} />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-
-          <p className="text-[11px] text-text-tertiary mt-2">Awaiting packaging or dispatch</p>
-        </div>
-
-        {/* Inventory Value Card */}
-        <div className="glass-card glow-card rounded-2xl p-5 relative overflow-hidden stagger-enter">
-          <div className="absolute inset-0 bg-gradient-to-br from-info/5 via-transparent to-transparent opacity-50" />
-          <div className="flex items-center justify-between relative z-10">
-            <span
-              className="text-[10px] font-semibold text-text-secondary uppercase tracking-[0.14em] font-display"
-            >
-              Inventory Value
-            </span>
-            <div className="w-7 h-7 bg-info/10 rounded-lg flex items-center justify-center">
-              <Package className="w-4 h-4 text-info" />
-            </div>
-          </div>
-          <div className="mt-4 flex items-end justify-between relative z-10">
-            <span
-              className="text-[26px] font-bold text-text-primary leading-none tracking-[-0.02em] stat-number font-display"
-            >
-              ₹{stats.inventoryValue.toLocaleString('en-IN')}
-            </span>
-            <span className="text-xs text-info flex items-center gap-0.5 bg-info/10 px-2 py-0.5 rounded-full font-medium">
-              Balanced
-            </span>
-          </div>
-
-          {/* Sparkline */}
-          <div className="h-10 w-full mt-3 relative z-10">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={[
-                { val: stats.inventoryValue * 0.95 },
-                { val: stats.inventoryValue * 0.97 },
-                { val: stats.inventoryValue * 0.96 },
-                { val: stats.inventoryValue * 1.02 },
-                { val: stats.inventoryValue }
-              ]}>
-                <Line type="monotone" dataKey="val" stroke="#60a5fa" strokeWidth={1.5} dot={false} />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-
-          <p className="text-[11px] text-text-tertiary mt-2">Value of stock on hand</p>
-        </div>
-
-        {/* Low Stock Items Card */}
-        <div className="glass-card glow-card rounded-2xl p-5 relative overflow-hidden stagger-enter">
-          <div className="absolute inset-0 bg-gradient-to-br from-error/5 via-transparent to-transparent opacity-50" />
-          <div className="flex items-center justify-between relative z-10">
-            <span
-              className="text-[10px] font-semibold text-text-secondary uppercase tracking-[0.14em] font-display"
-            >
-              Low Stock Items
-            </span>
-            <div className="w-7 h-7 bg-error/10 rounded-lg flex items-center justify-center">
-              <AlertTriangle className="w-4 h-4 text-error animate-pulse" />
-            </div>
-          </div>
-          <div className="mt-4 flex items-end justify-between relative z-10">
-            <span
-              className={`text-[26px] font-bold leading-none tracking-[-0.02em] stat-number font-display ${stats.lowStock > 0 ? 'text-error' : 'text-text-primary'}`}
-            >
-              {stats.lowStock.toString().padStart(2, '0')}
-            </span>
-            {stats.lowStock > 0 ? (
-              <span className="text-xs text-error flex items-center gap-0.5 bg-error/10 px-2 py-0.5 rounded-full font-semibold">
-                Action Required
-              </span>
-            ) : (
-              <span className="text-xs text-success flex items-center gap-0.5 bg-success/10 px-2 py-0.5 rounded-full font-medium">
-                All Good
-              </span>
+            {profileDropdownOpen && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setProfileDropdownOpen(false)} />
+                <div className="absolute right-0 mt-2 w-52 bg-white rounded-2xl shadow-2xl border border-gray-150 z-50 py-2 animate-in fade-in slide-in-from-top-2 duration-150 text-left">
+                  <div className="px-4 py-2 border-b border-gray-100 mb-1">
+                    <p className="text-xs font-bold text-gray-800 truncate">{username}</p>
+                    <p className="text-[9px] font-bold text-gray-400 uppercase tracking-wider mt-0.5">{userRole}</p>
+                  </div>
+                  <button
+                    onClick={() => signOut({ callbackUrl: "/login" })}
+                    className="w-full flex items-center gap-2 px-4 py-2 text-xs font-bold text-rose-600 hover:bg-rose-50 transition-colors uppercase tracking-wider"
+                  >
+                    <LogOut className="w-3.5 h-3.5" />
+                    Sign Out
+                  </button>
+                </div>
+              </>
             )}
           </div>
-
-          {/* Sparkline */}
-          <div className="h-10 w-full mt-3 relative z-10">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={[
-                { val: stats.lowStock * 1.3 },
-                { val: stats.lowStock * 1.2 },
-                { val: stats.lowStock * 1.4 },
-                { val: stats.lowStock * 0.9 },
-                { val: stats.lowStock }
-              ]}>
-                <Line type="monotone" dataKey="val" stroke="#f87171" strokeWidth={1.5} dot={false} />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-
-          <p className="text-[11px] text-text-tertiary mt-2">Items below safety levels</p>
         </div>
-      </div>
+      </header>
 
-      {/* Revenue Analytics + System Status */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* Chart Card */}
-        <div className="lg:col-span-2 glass-card rounded-2xl p-5 relative overflow-hidden">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-6">
-            <div>
-              <h3
-                className="text-[10px] font-semibold text-text-secondary tracking-[0.14em] uppercase font-display"
-              >
-                Revenue Flow
-              </h3>
-              <div className="flex items-center gap-2 mt-1.5">
-                <span
-                  className="text-[22px] font-bold text-text-primary leading-none tracking-[-0.02em] stat-number font-display"
+      {/* MODULE SELECT GRID CONTAINER */}
+      <main className="flex-1 flex items-center justify-center p-6 md:p-12">
+        <div className="w-full max-w-4xl grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-x-6 gap-y-10 justify-items-center animate-in fade-in slide-in-from-bottom-8 duration-600">
+          
+          {filteredModules.map((m) => {
+            const Icon = m.icon;
+            
+            return (
+              <div key={m.name} className="flex flex-col items-center">
+                <Link
+                  href={m.path}
+                  className="w-24 h-24 sm:w-28 sm:h-28 bg-white rounded-3xl shadow-md hover:shadow-xl border border-gray-100/60 flex items-center justify-center hover:scale-105 hover:-translate-y-1 active:scale-95 transition-all duration-300 group"
                 >
-                  ₹{stats.totalRevenue.toLocaleString('en-IN')}
+                  <div className={cn(
+                    "w-16 h-16 sm:w-20 sm:h-20 rounded-2xl flex items-center justify-center transition-all duration-300",
+                    m.iconBg
+                  )}>
+                    <Icon className={cn("w-9 h-9 sm:w-11 sm:h-11 transition-transform group-hover:scale-110 group-hover:rotate-3 duration-300", m.iconColor)} strokeWidth={1.5} />
+                  </div>
+                </Link>
+                
+                <span className="text-xs sm:text-sm font-bold text-gray-700 tracking-wide mt-3 text-center truncate w-24">
+                  {m.name}
                 </span>
-                <span className="text-[11px] text-text-tertiary">cumulative volume</span>
               </div>
-            </div>
-            <div className="flex bg-bg-tertiary p-1 rounded-xl border border-border">
-              <button
-                onClick={() => setChartDays(7)}
-                className={`px-3 py-1 text-[11px] rounded-lg transition-all font-semibold ${
-                  chartDays === 7
-                    ? 'bg-accent text-white shadow-md shadow-accent/20'
-                    : 'text-text-secondary hover:text-text-primary'
-                }`}
-
-              >
-                7 Days
-              </button>
-              <button
-                onClick={() => setChartDays(30)}
-                className={`px-3 py-1 text-[11px] rounded-lg transition-all font-semibold ${
-                  chartDays === 30
-                    ? 'bg-accent text-white shadow-md shadow-accent/20'
-                    : 'text-text-secondary hover:text-text-primary'
-                }`}
-
-              >
-                30 Days
-              </button>
-            </div>
-          </div>
-          <div className="h-56 w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={revenueData} style={{ cursor: 'pointer' }}>
-                <defs>
-                  <linearGradient id="revenueGlow" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="var(--color-accent)" stopOpacity={0.25} />
-                    <stop offset="95%" stopColor="var(--color-accent)" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" vertical={false} opacity={0.3} />
-                <XAxis
-                  dataKey="date"
-                  stroke="var(--color-text-tertiary)"
-                  axisLine={false}
-                  tickLine={false}
-                  fontSize={11}
-                  dy={6}
-                />
-                <YAxis
-                  stroke="var(--color-text-tertiary)"
-                  axisLine={false}
-                  tickLine={false}
-                  fontSize={11}
-                  tickFormatter={(v) => `₹${v / 1000}K`}
-                  dx={-6}
-                />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: 'var(--color-bg-secondary)',
-                    borderColor: 'var(--color-border)',
-                    borderRadius: '12px',
-                    color: 'var(--color-text-primary)',
-                    fontSize: '12px',
-                    boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
-                    backdropFilter: 'blur(8px)',
-                  }}
-                  formatter={(v) => [`₹${Number(v).toLocaleString('en-IN')}`, 'Revenue']}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="amount"
-                  stroke="var(--color-accent)"
-                  strokeWidth={2.5}
-                  fillOpacity={1}
-                  fill="url(#revenueGlow)"
-                  activeDot={{ r: 5, strokeWidth: 2, stroke: 'var(--color-accent)', fill: 'var(--color-bg-secondary)' }}
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
+            );
+          })}
         </div>
+      </main>
 
-        {/* System Status Card */}
-        <div className="glass-card rounded-2xl p-5 flex flex-col justify-between">
-          <div>
-            <h3
-              className="text-[10px] font-semibold text-text-secondary uppercase tracking-[0.14em] mb-4 font-display"
-            >
-              Infrastructure Logs
-            </h3>
-            <div className="space-y-3">
-              <div className="flex items-center justify-between p-3 bg-bg-tertiary/50 border border-border rounded-xl hover:border-success/30 transition-colors">
-                <span className="text-[13px] text-text-secondary">Core Database</span>
-                <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 bg-success rounded-full pulse-status"></span>
-                  <span className="text-[11px] font-semibold text-text-primary">Cloud Sync: Online</span>
-                </div>
-              </div>
-              <div className="flex items-center justify-between p-3 bg-bg-tertiary/50 border border-border rounded-xl hover:border-success/30 transition-colors">
-                <span className="text-[13px] text-text-secondary">Prisma API Client</span>
-                <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 bg-success rounded-full pulse-status"></span>
-                  <span className="text-[11px] font-semibold text-text-primary">Active</span>
-                </div>
-              </div>
-              <div className="flex items-center justify-between p-3 bg-bg-tertiary/50 border border-border rounded-xl hover:border-success/30 transition-colors">
-                <span className="text-[13px] text-text-secondary">Authentication</span>
-                <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 bg-success rounded-full pulse-status"></span>
-                  <span className="text-[11px] font-semibold text-text-primary">Session Live</span>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div className="mt-4 pt-4 border-t border-border flex items-center justify-between">
-            <span className="text-[11px] text-text-tertiary">System Integrity: 100%</span>
-            <Activity className="w-4 h-4 text-success animate-pulse" />
-          </div>
-        </div>
-      </div>
-
-      {/* Market Demand + Critical Alerts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 stagger-enter" style={{ animationDelay: '200ms' }}>
-        {/* Market Demand Panel */}
-        <div className="glass-card glow-card rounded-2xl p-5">
-          <h3
-            className="text-[10px] font-semibold text-text-secondary uppercase tracking-[0.14em] mb-4 font-display"
-          >
-            Product Category Demand
-          </h3>
-          <div className="space-y-3.5">
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between">
-                <span className="text-[12px] text-text-secondary">Faucets & Brass Taps</span>
-                <span className="text-[12px] font-semibold text-text-primary">78%</span>
-              </div>
-              <div className="w-full h-2 bg-bg-tertiary rounded-full overflow-hidden">
-                <div className="w-[78%] h-full bg-success rounded-full transition-all duration-700 ease-out" style={{ animation: 'slide-up-fade 0.5s ease-out 0.1s both' }}></div>
-              </div>
-            </div>
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between">
-                <span className="text-[12px] text-text-secondary">Showers & Rose Sprays</span>
-                <span className="text-[12px] font-semibold text-text-primary">16%</span>
-              </div>
-              <div className="w-full h-2 bg-bg-tertiary rounded-full overflow-hidden">
-                <div className="w-[16%] h-full bg-warning rounded-full transition-all duration-700 ease-out" style={{ animation: 'slide-up-fade 0.5s ease-out 0.2s both' }}></div>
-              </div>
-            </div>
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between">
-                <span className="text-[12px] text-text-secondary">Sinks & Bath Accessories</span>
-                <span className="text-[12px] font-semibold text-text-primary">6%</span>
-              </div>
-              <div className="w-full h-2 bg-bg-tertiary rounded-full overflow-hidden">
-                <div className="w-[6%] h-full bg-error rounded-full transition-all duration-700 ease-out" style={{ animation: 'slide-up-fade 0.5s ease-out 0.3s both' }}></div>
-              </div>
-            </div>
-          </div>
-          <p className="text-[11px] text-text-tertiary mt-4 pt-2 border-t border-border">
-            Top active designs: premium single-lever faucets and rain shower subassemblies.
-          </p>
-        </div>
-
-        {/* Critical Alerts Panel */}
-        <div className="glass-card glow-card rounded-2xl p-5 flex flex-col justify-between">
-          <div>
-            <h3
-              className="text-[10px] font-semibold text-text-secondary uppercase tracking-[0.14em] mb-3 font-display"
-            >
-              Critical Action Items
-            </h3>
-            <div className="space-y-2.5">
-              <Link href="/inventory?filter=low" className="flex items-start gap-3 p-3 bg-error/5 border border-error/10 rounded-xl hover:bg-error/10 hover:border-error/20 transition-all duration-200 cursor-pointer group">
-                <CircleAlert className="w-4.5 h-4.5 text-error flex-shrink-0 mt-0.5 group-hover:scale-110 transition-transform" />
-                <div>
-                  <p className="text-[13px] font-semibold text-text-primary leading-snug">
-                    {stats.lowStock} Items Critically Low
-                  </p>
-                  <p className="text-[11px] text-text-secondary mt-0.5">Standard stock parameters require replenishment.</p>
-                </div>
-              </Link>
-              <Link href="/orders" className="flex items-start gap-3 p-3 bg-warning/5 border border-warning/10 rounded-xl hover:bg-warning/10 hover:border-warning/20 transition-all duration-200 cursor-pointer group">
-                <Clock className="w-4.5 h-4.5 text-warning flex-shrink-0 mt-0.5 group-hover:scale-110 transition-transform" />
-                <div>
-                  <p className="text-[13px] font-semibold text-text-primary leading-snug">
-                    {stats.activeOrders} Active Pending Orders
-                  </p>
-                  <p className="text-[11px] text-text-secondary mt-0.5">Sales pipeline contains items waiting for dispatch.</p>
-                </div>
-              </Link>
-              <div className="flex items-start gap-3 p-3 bg-info/5 border border-info/10 rounded-xl hover:bg-info/10 hover:border-info/20 transition-all duration-200 cursor-pointer group">
-                <Truck className="w-4.5 h-4.5 text-info flex-shrink-0 mt-0.5 group-hover:scale-110 transition-transform" />
-                <div>
-                  <p className="text-[13px] font-semibold text-text-primary leading-snug">
-                    Active Delivery Status
-                  </p>
-                  <p className="text-[11px] text-text-secondary mt-0.5">Track standard supplier transactions and delivery schedules.</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Quick Navigation / Action Hub */}
-      <div className="glass-card glow-card rounded-2xl p-5 stagger-enter" style={{ animationDelay: '300ms' }}>
-        <h3
-          className="text-[10px] font-semibold text-text-secondary uppercase tracking-[0.14em] mb-3 font-display"
-        >
-          Action Hub
-        </h3>
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-          <Link
-            href="/orders"
-            className="flex items-center justify-center gap-2 p-3 bg-bg-tertiary hover:bg-bg-hover rounded-xl border border-border hover:border-accent/30 hover:-translate-y-1 active:scale-95 transition-all duration-200 group"
-          >
-            <Plus className="w-4 h-4 text-accent group-hover:rotate-90 transition-transform duration-300 flex-shrink-0" />
-            <span className="text-[13px] font-medium text-text-secondary">Create Order</span>
-          </Link>
-          <Link
-            href="/inventory"
-            className="flex items-center justify-center gap-2 p-3 bg-bg-tertiary hover:bg-bg-hover rounded-xl border border-border hover:border-accent/30 hover:-translate-y-1 active:scale-95 transition-all duration-200 group"
-          >
-            <Package className="w-4 h-4 text-info flex-shrink-0" />
-            <span className="text-[13px] font-medium text-text-secondary">Stock Inward</span>
-          </Link>
-          <Link
-            href="/inventory"
-            className="flex items-center justify-center gap-2 p-3 bg-bg-tertiary hover:bg-bg-hover rounded-xl border border-border hover:border-accent/30 hover:-translate-y-1 active:scale-95 transition-all duration-200 group"
-          >
-            <ShoppingCart className="w-4 h-4 text-success flex-shrink-0" />
-            <span className="text-[13px] font-medium text-text-secondary">Add Item</span>
-          </Link>
-          <Link
-            href="/reports"
-            className="flex items-center justify-center gap-2 p-3 bg-bg-tertiary hover:bg-bg-hover rounded-xl border border-border hover:border-accent/30 hover:-translate-y-1 active:scale-95 transition-all duration-200 group"
-          >
-            <FileText className="w-4 h-4 text-warning flex-shrink-0" />
-            <span className="text-[13px] font-medium text-text-secondary">View Reports</span>
-          </Link>
-          <Link
-            href="/inventory"
-            className="flex items-center justify-center gap-2 p-3 bg-bg-tertiary hover:bg-bg-hover rounded-xl border border-border hover:border-accent/30 hover:-translate-y-1 active:scale-95 transition-all duration-200 group"
-          >
-            <AlertTriangle className="w-4 h-4 text-error flex-shrink-0" />
-            <span className="text-[13px] font-medium text-text-secondary">Low Stock</span>
-          </Link>
-        </div>
-      </div>
+      {/* VERSION INFO FOOTER */}
+      <footer className="w-full py-4 text-center text-[10px] text-gray-400 font-semibold uppercase tracking-widest shrink-0 select-none">
+        Zoie Bathware • Manufacturing Suite v1.0
+      </footer>
     </div>
   );
 }
